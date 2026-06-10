@@ -4,7 +4,7 @@
       <RoundEdit v-model="inputRound" @focus="isEditing = true" @blur="isEditing = false"
         @change="confirmRoundChange" />
       <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-        <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAll">全选</el-checkbox>
+        <el-checkbox :indeterminate="isIndeterminate" v-model="ifCheckAll" @change="handleCheckAll">全选</el-checkbox>
 
         <el-checkbox-group v-model="selectedBox" @change="fetchData">
           <el-checkbox v-for="item in checkboxList" :label="item.value" :checked="item.checked"
@@ -20,7 +20,7 @@
 
       <div class="result">
         <div :style="{ opacity: isEditing || isLoadingBias ? 0.3 : 1 }" v-loading="isLoadingBias">
-          <el-checkbox :indeterminate="isIndeterminateBias" v-model="checkAllBias"
+          <el-checkbox :indeterminate="isIndeterminateBias" v-model="ifCheckAllBias"
             @change="handleCheckAllBias">全选</el-checkbox>
 
           <el-checkbox-group v-model="selectedBoxBias" @change="fetchDataBias">
@@ -32,7 +32,7 @@
           <PredictCard title="斜线" :data="combineDataBias" :showRound="inputRound" />
         </div>
       </div>
-    </div> 
+    </div>
   </div>
 </template>
 
@@ -48,46 +48,44 @@ export default {
     RoundEdit,
     PredictCard,
   },
-  computed: {
-    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
-  },
   watch: {
     sharedRound() {
       this.fetchAll();
     },
-    selectedBox(val) {
-      const maxLength = this.checkboxList.length;
-      const emptyLength = this.checkboxList.filter((item) => item.disabled).length;
-      const cur = val.length
-
-      if (cur == maxLength) {
-        this.checkAll = true;
-        this.isIndeterminate = false;
-      } else if (cur == emptyLength) {
-        this.checkAll = false;
-        this.isIndeterminate = false;
-      } else {
-        this.checkAll = false;
-        this.isIndeterminate = true;
+  },
+  computed: {
+    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
+    ifCheckAll: {
+      get() {
+        console.log(' 运行了 2 次computed ifCheckAll，注意排查原因')
+        return this.checkboxList.length === this.selectedBox.length
+      },
+      set(trigger) {
+        this.handleCheckAll(trigger)
       }
     },
-    selectedBoxBias(val) {
-      const maxLength = this.checkboxList2.length;
-      const emptyLength = this.checkboxList2.filter((item) => item.disabled).length;
-      const cur = val.length
-
-      if (cur == maxLength) {
-        this.checkAllBias = true;
-        this.isIndeterminateBias = false;
-      } else if (cur == emptyLength) {
-        this.checkAllBias = false;
-        this.isIndeterminateBias = false;
-      } else {
-        this.checkAllBias = false;
-        this.isIndeterminateBias = true;
+    ifCheckAllBias: {
+      get() {
+        return this.checkboxList2.length === this.selectedBoxBias.length
+      },
+      set(trigger) {
+        this.handleCheckAllBias(trigger)
       }
+    },
+    isIndeterminate() {
+      const cur = this.selectedBox.length
+      const max = this.checkboxList.length;
+      const min = this.checkboxList.filter((i) => i.disabled).length;
+      return min < cur && cur < max
+    },
+    isIndeterminateBias() {
+      const cur = this.selectedBoxBias.length
+      const max = this.checkboxList2.length;
+      const min = this.checkboxList2.filter((i) => i.disabled).length;
+      return min < cur && cur < max
     }
   },
+
   created() {
     this.fetchData = debounce(this.fetchData, 500);
     this.fetchDataBias = debounce(this.fetchDataBias, 500);
@@ -119,13 +117,6 @@ export default {
       checkboxList2: [],
       selectedBoxBias: [],
       combineDataBias: {},
-
-      //全选框
-      checkAll: false,
-      isIndeterminate: false,
-
-      checkAllBias: false,
-      isIndeterminateBias: false,
     };
   },
 
