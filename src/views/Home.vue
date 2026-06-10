@@ -1,58 +1,40 @@
 <template>
   <div id="app">
-    <el-tabs v-model="activeName" type="card">
-      <el-tab-pane label="历史" name="first">
-        <History v-if="activeName === 'first'" />
-      </el-tab-pane>
-
-      <el-tab-pane label="配对" name="second">
-        <pair-predict v-if="activeName === 'second'" />
-      </el-tab-pane>
-
-      <el-tab-pane label="对称" name="third">
-        <sym-predict v-if="activeName === 'third'" />
-      </el-tab-pane>
-
-      <el-tab-pane label="重复" name="fourth">
-        <repeat-predict v-if="activeName === 'fourth'" />
-      </el-tab-pane>
-
-      <el-tab-pane label="顺序" name="fifth">
-        <sequence-predict v-if="activeName === 'fifth'" />
-      </el-tab-pane>
-
-      <el-tab-pane label="综合" name="sixth">
-        <combine-predict v-if="activeName === 'sixth'" />
-      </el-tab-pane>
+    <el-tabs v-model="currentTab" type="card" @tab-click="handleTabClick">
+      <el-tab-pane label="历史" name="/plw/history"></el-tab-pane>
+      <el-tab-pane label="配对" name="/plw/pair"></el-tab-pane>
+      <el-tab-pane label="对称" name="/plw/sym"></el-tab-pane>
+      <el-tab-pane label="重复" name="/plw/repeat"></el-tab-pane>
+      <el-tab-pane label="顺序" name="/plw/sequence"></el-tab-pane>
+      <el-tab-pane label="综合" name="/plw/combine"></el-tab-pane>
     </el-tabs>
+
+    <keep-alive>
+      <router-view />
+    </keep-alive>
   </div>
 </template>
 
 <script>
-import History from "./History.vue";
-import PairPredict from "./PairPredict.vue";
-
-// import SymPredict from "./SymPredict.vue";
-// import RepeatPredict from "./RepeatPredict.vue";
-// import SequencePredict from "./SequencePredict.vue";
-// import CombinePredict from "./CombinePredict.vue";
-
 export default {
   name: "App",
-  data() {
-    return {
-      activeName: "second",
-    };
+  computed: {
+    // 动态同步：防止用户点击浏览器前进/后退时，Tab 高亮位置不跟着动
+    currentTab: {
+      get() {
+        return this.$route.path;
+      },
+      set() {} // 路由跳转由 handleTabClick 负责，这里给个空函数即可
+    }
   },
-  components: {
-    History,
-    PairPredict,
-    SymPredict: () => import("./SymPredict.vue"),
-    RepeatPredict: () => import("./RepeatPredict.vue"),
-    SequencePredict: () => import("./SequencePredict.vue"),
-    CombinePredict: () => import("./CombinePredict.vue"),
+  methods: {
+    handleTabClick(tab) {
+      // 当点击 Tab 时，触发路由跳转
+      if (this.$route.path !== tab.name) {
+        this.$router.push(tab.name);
+      }
+    }
   },
-  methods: {},
 };
 </script>
 

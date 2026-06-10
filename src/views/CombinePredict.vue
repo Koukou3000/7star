@@ -10,7 +10,7 @@
       <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
         <el-checkbox
           :indeterminate="isIndeterminate"
-          v-model="ifCheckAll"
+          v-model="isAllChecked"
           @change="handleCheckAll"
           >全选</el-checkbox
         >
@@ -38,7 +38,7 @@
         >
           <el-checkbox
             :indeterminate="isIndeterminateBias"
-            v-model="ifCheckAllBias"
+            v-model="isAllCheckedBias"
             @change="handleCheckAllBias"
             >全选</el-checkbox
           >
@@ -76,22 +76,37 @@ export default {
     sharedRound: {
       handler(newVal) {
         if (!newVal) return;
-        // 核心逻辑：只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
-        // 或者是局部输入框为空时，我们才强制将全局期数同步给局部输入框。
-        const isDifferent = newVal !== this.inputRound;
-        const isEmpty = !this.inputRound;
+        if (!this.isActivated) return;
 
-        if (isDifferent || isEmpty) {
+        const isChange = newVal !== this.inputRound;
+        const isEmpty = !this.inputRound;
+        if (isChange || isEmpty) {
           this.inputRound = newVal;
         }
-        this.fetchAll();
+        this.fetchBoth();
       },
       immediate: true,
     },
   },
+  activated() {
+    this.isActivated = true;
+    if (this.sharedRound) {
+      this.inputRound = this.sharedRound;
+      this.fetchBoth();
+    }
+  },
+  deactivated() {
+    this.isActivated = false; 
+  },
+  created() {
+    this.initCheckbox();
+    this.fetchData = debounce(this.fetchData, 600)
+    this.fetchDataBias = debounce(this.fetchDataBias, 600)
+  },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
-    ifCheckAll: {
+    // 全选checkbox
+    isAllChecked: {
       get() {
         return this.checkboxList.length === this.selectedBox.length;
       },
@@ -99,7 +114,7 @@ export default {
         this.handleCheckAll(trigger);
       },
     },
-    ifCheckAllBias: {
+    isAllCheckedBias: {
       get() {
         return this.checkboxList2.length === this.selectedBoxBias.length;
       },
@@ -120,14 +135,12 @@ export default {
       return min < cur && cur < max;
     },
   },
-  created() {
-    this.fetchData = debounce(this.fetchData, 500);
-    this.fetchDataBias = debounce(this.fetchDataBias, 500);
-    this.initCheckbox();
-  },
+
   data() {
     return {
       inputRound: "",
+      isActivated: false,
+
       isEditing: false,
       isLoading: false,
       isLoadingBias: false,
@@ -152,30 +165,6 @@ export default {
   },
 
   methods: {
-    initCheckbox() {
-      this.checkboxList = [
-        { label: "直线配对", value: this.tableName1, checked: true, disabled: true },
-        { label: "直线对称", value: this.tableName2, checked: true },
-        { label: "直线重复", value: this.tableName3, checked: true },
-        { label: "直线顺序", value: this.tableName4, checked: true },
-        { label: "斜线对称", value: this.tableName6, checked: true },
-        { label: "斜线重复", value: this.tableName7, checked: true },
-        { label: "斜线顺序", value: this.tableName8, checked: true },
-      ];
-      this.checkboxList2 = [
-        { label: "斜线配对", value: this.tableName5, checked: true, disabled: true },
-        { label: "直线对称", value: this.tableName2, checked: true },
-        { label: "直线重复", value: this.tableName3, checked: true },
-        { label: "直线顺序", value: this.tableName4, checked: true },
-        { label: "斜线对称", value: this.tableName6, checked: true },
-        { label: "斜线重复", value: this.tableName7, checked: true },
-        { label: "斜线顺序", value: this.tableName8, checked: true },
-      ];
-      this.selectedBox = this.checkboxList.filter((i) => i.checked).map((i) => i.value);
-      this.selectedBoxBias = this.checkboxList2
-        .filter((i) => i.checked)
-        .map((i) => i.value);
-    },
     handleCheckAll(trigger) {
       if (trigger) {
         this.selectedBox = this.checkboxList.map((item) => item.value);
@@ -199,7 +188,7 @@ export default {
     confirmRoundChange(innerRound) {
       this.$store.commit("SET_sharedRound", innerRound);
     },
-    async fetchAll() {
+    async fetchBoth() {
       await Promise.all([this.fetchData(), this.fetchDataBias()]);
     },
     async fetchData() {
@@ -236,7 +225,7 @@ export default {
           },
           { round: currentRound }
         );
-        this.inputRound = currentRound;
+        // this.inputRound = currentRound;
         this.combineData = mergeData;
       } catch (e) {
         console.log(e);
@@ -278,7 +267,7 @@ export default {
           },
           { round: currentRound }
         );
-        this.inputRound = currentRound;
+        // this.inputRound = currentRound;
         this.combineDataBias = mergeData;
       } catch (e) {
         console.log(e);
@@ -298,6 +287,30 @@ export default {
         console.warn("JSON解析失败，返回空数组:", arr, e);
         return [];
       }
+    },
+    initCheckbox() {
+      this.checkboxList = [
+        { label: "直线配对", value: this.tableName1, checked: true, disabled: true },
+        { label: "直线对称", value: this.tableName2, checked: true },
+        { label: "直线重复", value: this.tableName3, checked: true },
+        { label: "直线顺序", value: this.tableName4, checked: true },
+        { label: "斜线对称", value: this.tableName6, checked: true },
+        { label: "斜线重复", value: this.tableName7, checked: true },
+        { label: "斜线顺序", value: this.tableName8, checked: true },
+      ];
+      this.checkboxList2 = [
+        { label: "斜线配对", value: this.tableName5, checked: true, disabled: true },
+        { label: "直线对称", value: this.tableName2, checked: true },
+        { label: "直线重复", value: this.tableName3, checked: true },
+        { label: "直线顺序", value: this.tableName4, checked: true },
+        { label: "斜线对称", value: this.tableName6, checked: true },
+        { label: "斜线重复", value: this.tableName7, checked: true },
+        { label: "斜线顺序", value: this.tableName8, checked: true },
+      ];
+      this.selectedBox = this.checkboxList.filter((i) => i.checked).map((i) => i.value);
+      this.selectedBoxBias = this.checkboxList2
+        .filter((i) => i.checked)
+        .map((i) => i.value);
     },
   },
 };
