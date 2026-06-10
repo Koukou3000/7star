@@ -2,22 +2,27 @@
   <div id="app">
     <el-tabs v-model="activeName" type="card">
       <el-tab-pane label="历史" name="first">
-        <History />
+        <History v-if="activeName === 'first'" />
       </el-tab-pane>
+
       <el-tab-pane label="配对" name="second">
-        <pair-predict />
+        <pair-predict v-if="activeName === 'second'" />
       </el-tab-pane>
+
       <el-tab-pane label="对称" name="third">
-        <sym-predict />
+        <sym-predict v-if="activeName === 'third'" />
       </el-tab-pane>
+
       <el-tab-pane label="重复" name="fourth">
-        <repeat-predict />
+        <repeat-predict v-if="activeName === 'fourth'" />
       </el-tab-pane>
+
       <el-tab-pane label="顺序" name="fifth">
-        <sequence-predict />
+        <sequence-predict v-if="activeName === 'fifth'" />
       </el-tab-pane>
+
       <el-tab-pane label="综合" name="sixth">
-        <combine-predict />
+        <combine-predict v-if="activeName === 'sixth'" />
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -27,25 +32,25 @@
 import History from "./History.vue";
 import PairPredict from "./PairPredict.vue";
 
-import SymPredict from "./SymPredict.vue";
-import RepeatPredict from "./RepeatPredict.vue";
-import SequencePredict from "./SequencePredict.vue";
-import CombinePredict from "./CombinePredict.vue";
+// import SymPredict from "./SymPredict.vue";
+// import RepeatPredict from "./RepeatPredict.vue";
+// import SequencePredict from "./SequencePredict.vue";
+// import CombinePredict from "./CombinePredict.vue";
 
 export default {
   name: "App",
   data() {
     return {
-      activeName: "sixth",
+      activeName: "second",
     };
   },
   components: {
     History,
     PairPredict,
-    SymPredict,
-    RepeatPredict,
-    SequencePredict,
-    CombinePredict,
+    SymPredict: () => import("./SymPredict.vue"),
+    RepeatPredict: () => import("./RepeatPredict.vue"),
+    SequencePredict: () => import("./SequencePredict.vue"),
+    CombinePredict: () => import("./CombinePredict.vue"),
   },
   methods: {},
 };
