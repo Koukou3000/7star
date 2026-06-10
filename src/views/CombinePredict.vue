@@ -1,13 +1,27 @@
 <template>
   <div>
     <div class="result">
-      <RoundEdit v-model="inputRound" @focus="isEditing = true" @blur="isEditing = false"
-        @change="confirmRoundChange" />
+      <RoundEdit
+        v-model="inputRound"
+        @focus="isEditing = true"
+        @blur="isEditing = false"
+        @change="confirmRoundChange"
+      />
       <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-        <el-checkbox :indeterminate="isIndeterminate" v-model="ifCheckAll" @change="handleCheckAll">全选</el-checkbox>
+        <el-checkbox
+          :indeterminate="isIndeterminate"
+          v-model="ifCheckAll"
+          @change="handleCheckAll"
+          >全选</el-checkbox
+        >
 
         <el-checkbox-group v-model="selectedBox" @change="fetchData">
-          <el-checkbox v-for="item in checkboxList" :label="item.value" :disabled="item.disabled">
+          <el-checkbox
+            v-for="item in checkboxList"
+            :key="item.value"
+            :label="item.value"
+            :disabled="item.disabled"
+          >
             {{ item.label }}
           </el-checkbox>
         </el-checkbox-group>
@@ -18,12 +32,24 @@
       <hr />
 
       <div class="result">
-        <div :style="{ opacity: isEditing || isLoadingBias ? 0.3 : 1 }" v-loading="isLoadingBias">
-          <el-checkbox :indeterminate="isIndeterminateBias" v-model="ifCheckAllBias"
-            @change="handleCheckAllBias">全选</el-checkbox>
+        <div
+          :style="{ opacity: isEditing || isLoadingBias ? 0.3 : 1 }"
+          v-loading="isLoadingBias"
+        >
+          <el-checkbox
+            :indeterminate="isIndeterminateBias"
+            v-model="ifCheckAllBias"
+            @change="handleCheckAllBias"
+            >全选</el-checkbox
+          >
 
           <el-checkbox-group v-model="selectedBoxBias" @change="fetchDataBias">
-            <el-checkbox v-for="item in checkboxList2" :label="item.value" :disabled="item.disabled">
+            <el-checkbox
+              v-for="item in checkboxList2"
+              :key="item.value"
+              :label="item.value"
+              :disabled="item.disabled"
+            >
               {{ item.label }}
             </el-checkbox>
           </el-checkbox-group>
@@ -47,50 +73,58 @@ export default {
     PredictCard,
   },
   watch: {
-    sharedRound(val) {
-      this.inputRound = val; // 保持 inputRound 实时联动
+    sharedRound(newVal) {
+      if (!newVal) return;
+      // 核心逻辑：只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
+      // 或者是局部输入框为空时，我们才强制将全局期数同步给局部输入框。
+      const isDifferent = newVal !== this.inputRound;
+      const isEmpty = !this.inputRound;
+
+      if (isDifferent || isEmpty) {
+        this.inputRound = newVal;
+      }
       this.fetchAll();
-    }
+    },
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
     ifCheckAll: {
       get() {
-        return this.checkboxList.length === this.selectedBox.length
+        return this.checkboxList.length === this.selectedBox.length;
       },
       set(trigger) {
-        this.handleCheckAll(trigger)
-      }
+        this.handleCheckAll(trigger);
+      },
     },
     ifCheckAllBias: {
       get() {
-        return this.checkboxList2.length === this.selectedBoxBias.length
+        return this.checkboxList2.length === this.selectedBoxBias.length;
       },
       set(trigger) {
-        this.handleCheckAllBias(trigger)
-      }
+        this.handleCheckAllBias(trigger);
+      },
     },
     isIndeterminate() {
-      const cur = this.selectedBox.length
+      const cur = this.selectedBox.length;
       const max = this.checkboxList.length;
       const min = this.checkboxList.filter((i) => i.disabled).length;
-      return min < cur && cur < max
+      return min < cur && cur < max;
     },
     isIndeterminateBias() {
-      const cur = this.selectedBoxBias.length
+      const cur = this.selectedBoxBias.length;
       const max = this.checkboxList2.length;
       const min = this.checkboxList2.filter((i) => i.disabled).length;
-      return min < cur && cur < max
-    }
+      return min < cur && cur < max;
+    },
   },
   created() {
     this.fetchData = debounce(this.fetchData, 500);
     this.fetchDataBias = debounce(this.fetchDataBias, 500);
     this.initCheckbox();
   },
-  beforeCreate() { 
-    this.inputRound = this.sharedRound;
-  },
+  // beforeCreate() {
+  //   this.inputRound = this.sharedRound;
+  // },
   data() {
     return {
       inputRound: "",
@@ -137,14 +171,15 @@ export default {
         { label: "斜线重复", value: this.tableName7, checked: true },
         { label: "斜线顺序", value: this.tableName8, checked: true },
       ];
-      this.selectedBox = this.checkboxList.filter(i => i.checked).map(i => i.value)
-      this.selectedBoxBias = this.checkboxList2.filter(i => i.checked).map(i => i.value)
+      this.selectedBox = this.checkboxList.filter((i) => i.checked).map((i) => i.value);
+      this.selectedBoxBias = this.checkboxList2
+        .filter((i) => i.checked)
+        .map((i) => i.value);
     },
     handleCheckAll(trigger) {
       if (trigger) {
         this.selectedBox = this.checkboxList.map((item) => item.value);
-      }
-      else {
+      } else {
         this.selectedBox = this.checkboxList
           .filter((item) => item.disabled)
           .map((item) => item.value);
@@ -154,8 +189,7 @@ export default {
     handleCheckAllBias(trigger) {
       if (trigger) {
         this.selectedBoxBias = this.checkboxList2.map((item) => item.value);
-      }
-      else {
+      } else {
         this.selectedBoxBias = this.checkboxList2
           .filter((item) => item.disabled)
           .map((item) => item.value);

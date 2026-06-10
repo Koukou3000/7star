@@ -41,13 +41,19 @@ export default {
 		...mapState(['sharedRound'])
 	},
 	watch:{
-		sharedRound() {
-			this.fetchAllData()
-		},
+		sharedRound(newVal) {
+      if (!newVal) return;
+      // 核心逻辑：只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
+      // 或者是局部输入框为空时，我们才强制将全局期数同步给局部输入框。
+      const isDifferent = newVal !== this.inputRound;
+      const isEmpty = !this.inputRound;
+
+      if (isDifferent || isEmpty) {
+        this.inputRound = newVal;
+      }
+      this.fetchAllData();
+    },
 	},
-	mounted() {
-		this.inputRound = this.sharedRound
-  },
   data() {
 		return {
 			inputRound: '',

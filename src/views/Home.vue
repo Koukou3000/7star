@@ -48,9 +48,6 @@ export default {
     CombinePredict,
   },
   methods: {},
-  mounted() {
-    this.$store.dispatch("getLatestRound");
-  },
 };
 </script>
 
