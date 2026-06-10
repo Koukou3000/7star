@@ -7,8 +7,7 @@
         <el-checkbox :indeterminate="isIndeterminate" v-model="ifCheckAll" @change="handleCheckAll">全选</el-checkbox>
 
         <el-checkbox-group v-model="selectedBox" @change="fetchData">
-          <el-checkbox v-for="item in checkboxList" :label="item.value" :checked="item.checked"
-            :disabled="item.disabled">
+          <el-checkbox v-for="item in checkboxList" :label="item.value" :disabled="item.disabled">
             {{ item.label }}
           </el-checkbox>
         </el-checkbox-group>
@@ -24,8 +23,7 @@
             @change="handleCheckAllBias">全选</el-checkbox>
 
           <el-checkbox-group v-model="selectedBoxBias" @change="fetchDataBias">
-            <el-checkbox v-for="item in checkboxList2" :label="item.value" :checked="item.checked"
-              :disabled="item.disabled">
+            <el-checkbox v-for="item in checkboxList2" :label="item.value" :disabled="item.disabled">
               {{ item.label }}
             </el-checkbox>
           </el-checkbox-group>
@@ -49,15 +47,15 @@ export default {
     PredictCard,
   },
   watch: {
-    sharedRound() {
+    sharedRound(val) {
+      this.inputRound = val; // 保持 inputRound 实时联动
       this.fetchAll();
-    },
+    }
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
     ifCheckAll: {
       get() {
-        console.log(' 运行了 2 次computed ifCheckAll，注意排查原因')
         return this.checkboxList.length === this.selectedBox.length
       },
       set(trigger) {
@@ -85,13 +83,12 @@ export default {
       return min < cur && cur < max
     }
   },
-
   created() {
     this.fetchData = debounce(this.fetchData, 500);
     this.fetchDataBias = debounce(this.fetchDataBias, 500);
     this.initCheckbox();
   },
-  mounted() {
+  beforeCreate() { 
     this.inputRound = this.sharedRound;
   },
   data() {
@@ -140,6 +137,8 @@ export default {
         { label: "斜线重复", value: this.tableName7, checked: true },
         { label: "斜线顺序", value: this.tableName8, checked: true },
       ];
+      this.selectedBox = this.checkboxList.filter(i => i.checked).map(i => i.value)
+      this.selectedBoxBias = this.checkboxList2.filter(i => i.checked).map(i => i.value)
     },
     handleCheckAll(trigger) {
       if (trigger) {
