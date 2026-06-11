@@ -9,18 +9,16 @@
       >插入前 15 期
     </el-button>
 
-    <div v-loading="isLoading">
-      <el-row>
-        <el-col :span="4" class="numbers">期数</el-col>
-        <el-col :span="4" align="center">万</el-col>
-        <el-col :span="4" align="center">千</el-col>
-        <el-col :span="4" align="center">百</el-col>
-        <el-col :span="4" align="center">十</el-col>
-        <el-col :span="4" align="center">个</el-col>
-      </el-row>
-    </div>
+    <el-row>
+      <el-col :span="4" class="numbers">期数</el-col>
+      <el-col :span="4" align="center">万</el-col>
+      <el-col :span="4" align="center">千</el-col>
+      <el-col :span="4" align="center">百</el-col>
+      <el-col :span="4" align="center">十</el-col>
+      <el-col :span="4" align="center">个</el-col>
+    </el-row>
 
-    <div class="scroll-wrap">
+    <div class="scroll-wrap" v-loading="isLoading">
       <div v-for="(item, index) in results" :key="item.round" class="line-container">
         <div :class="[zebraCSS(index)]">
           <el-row>
@@ -34,12 +32,12 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
 import axios from "axios";
-import { server } from "@/utils/config.js";
 import { api } from "../api";
 
 export default {
@@ -51,21 +49,22 @@ export default {
       abortController: null,
       isLoading: false,
 
+      map:[],
       results: [],
       hasMore: true,
     };
-	},
-	computed: {
-		zebraCSS() {
+  },
+  computed: {
+    zebraCSS() {
       return (index) => {
         return index % 2 === 0 ? "zebra" : "";
       };
     },
-		start() {
-			return this.page * this.pageSize
-		}
-	},
-	activated() {
+    start() {
+      return this.page * this.pageSize;
+    },
+  },
+  activated() {
     this.getResult();
   },
   deactivated() {
@@ -80,27 +79,29 @@ export default {
   },
   methods: {
     async getResult() {
+      // if (this.isLoading || !this.hasMore) return;
       if (this.abortController) {
         this.abortController.abort();
       }
       // 创建全新的控制器
       this.abortController = new AbortController();
-			this.isLoading = true
+      this.isLoading = true;
 
-			try {
-				const resp = await api.getResults(this.start, this.pageSize, this.abortController.signal)
+      try {
+        const resp = await api.getResults(
+          this.start,
+          this.pageSize,
+          this.abortController.signal
+        );
         const newlines = resp.data;
-
         const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
-        const mergeLines = [...sortedLines, ...this.results];
 
         const uniqueMap = new Map();
-        mergeLines.forEach((item) => {
-          uniqueMap.set(item.round, item);
-        });
-        this.results = [...uniqueMap.values()];
+        sortedLines.forEach(item => uniqueMap.set(item.round, item)); // 1. uniqueMap先塞新数据
+        this.results.forEach(item => uniqueMap.set(item.round, item)) // 2. 后塞老数据
+        this.results = [...uniqueMap.values()]
 
-				// 分页判断
+        // 分页判断
         if (newlines.length < this.pageSize) {
           this.hasMore = false;
         }
@@ -120,7 +121,6 @@ export default {
       this.getResult();
     },
   },
-
 };
 </script>
 
