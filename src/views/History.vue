@@ -19,20 +19,23 @@
 		</div>
 	
 		
-		<div v-for="(item, index) in results" 
-			:key="item.round"
-			class="line-container">
-			<div :class="[zebraCSS(index)]">
-				<el-row>
-					<el-col :span="4" class="numbers">{{item.round}}</el-col>
-					<el-col :span="4" align="center">{{item.myriabit}}</el-col>
-					<el-col :span="4" align="center">{{item.thousand}}</el-col>
-					<el-col :span="4" align="center">{{item.hundred}}</el-col>
-					<el-col :span="4" align="center">{{item.ten}}</el-col>
-					<el-col :span="4" align="center">{{item.one}}</el-col>
-				</el-row>
+		<div class="scroll-wrap">
+
+			<div v-for="(item, index) in results" 
+				:key="item.round"
+				class="line-container">
+				<div :class="[zebraCSS(index)]">
+					<el-row>
+						<el-col :span="4" class="numbers">{{item.round}}</el-col>
+						<el-col :span="4" align="center">{{item.myriabit}}</el-col>
+						<el-col :span="4" align="center">{{item.thousand}}</el-col>
+						<el-col :span="4" align="center">{{item.hundred}}</el-col>
+						<el-col :span="4" align="center">{{item.ten}}</el-col>
+						<el-col :span="4" align="center">{{item.one}}</el-col>
+					</el-row>
+				</div>
+				
 			</div>
-			
 		</div>
 		
 	</div>
@@ -119,5 +122,12 @@
 .numbers{
 	font-size: 20px;
 	color: darkred;
+}
+html, body{
+	height: 99%;
+}
+.scroll-wrap{
+  height: 82vh; 
+  overflow-y: scroll;
 }
 </style>

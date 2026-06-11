@@ -8,10 +8,11 @@
       <el-tab-pane label="顺序" name="/plw/sequence"></el-tab-pane>
       <el-tab-pane label="综合" name="/plw/combine"></el-tab-pane>
     </el-tabs>
-
+ 
     <keep-alive>
       <router-view />
     </keep-alive>
+   
   </div>
 </template>
 
