@@ -221,6 +221,8 @@ export default {
         // this.inputRound = currentRound;
         this.combineData = mergeData;
       } catch (e) {
+        if (e.message === "canceled")
+          return;
         console.log(e);
       } finally {
         this.isLoading = false;
@@ -263,6 +265,8 @@ export default {
         // this.inputRound = currentRound;
         this.combineDataBias = mergeData;
       } catch (e) {
+        if (e.message === "canceled")
+          return;
         console.log(e);
       } finally {
         this.isLoadingBias = false;

@@ -83,6 +83,7 @@ export default {
       this.$store.commit("SET_sharedRound", innerRound);
     },
     async fetchData(tableName) {
+      console.log(typeof this.sharedRound) 
       const res = await api.getPredict( tableName, this.sharedRound );
       return res.data[0];
     },

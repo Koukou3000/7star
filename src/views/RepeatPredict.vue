@@ -89,6 +89,8 @@ export default {
         this.generateCombineData(straight, bias);
         this.inputRound = straight.round || bias.round;
       } catch (e) {
+        if (e.message === "canceled")
+          return;
         console.log(e);
         // this.$store.dispatch('getLatestRound')
       } finally {
