@@ -1,14 +1,27 @@
 <template>
   <div>
     <div class="result">
-      <RoundEdit v-model="inputRound" @focus="isEditing = true" @blur="isEditing = false"
-        @change="confirmRoundChange" />
+      <RoundEdit
+        v-model="inputRound"
+        @focus="isEditing = true"
+        @blur="isEditing = false"
+        @change="confirmRoundChange"
+      />
       <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-        <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAll">全选</el-checkbox>
+        <el-checkbox
+          :indeterminate="isIndeterminate"
+          v-model="isAllChecked"
+          @change="handleCheckAll"
+          >全选</el-checkbox
+        >
 
         <el-checkbox-group v-model="selectedBox" @change="fetchData">
-          <el-checkbox v-for="item in checkboxList" :label="item.value" :checked="item.checked"
-            :disabled="item.disabled">
+          <el-checkbox
+            v-for="item in checkboxList"
+            :key="item.value"
+            :label="item.value"
+            :disabled="item.disabled"
+          >
             {{ item.label }}
           </el-checkbox>
         </el-checkbox-group>
@@ -19,20 +32,31 @@
       <hr />
 
       <div class="result">
-        <div :style="{ opacity: isEditing || isLoadingBias ? 0.3 : 1 }" v-loading="isLoadingBias">
-          <el-checkbox :indeterminate="isIndeterminateBias" v-model="checkAllBias"
-            @change="handleCheckAllBias">全选</el-checkbox>
+        <div
+          :style="{ opacity: isEditing || isLoadingBias ? 0.3 : 1 }"
+          v-loading="isLoadingBias"
+        >
+          <el-checkbox
+            :indeterminate="isIndeterminateBias"
+            v-model="isAllCheckedBias"
+            @change="handleCheckAllBias"
+            >全选</el-checkbox
+          >
 
           <el-checkbox-group v-model="selectedBoxBias" @change="fetchDataBias">
-            <el-checkbox v-for="item in checkboxList2" :label="item.value" :checked="item.checked"
-              :disabled="item.disabled">
+            <el-checkbox
+              v-for="item in checkboxList2"
+              :key="item.value"
+              :label="item.value"
+              :disabled="item.disabled"
+            >
               {{ item.label }}
             </el-checkbox>
           </el-checkbox-group>
           <PredictCard title="斜线" :data="combineDataBias" :showRound="inputRound" />
         </div>
       </div>
-    </div> 
+    </div>
   </div>
 </template>
 
@@ -43,74 +67,85 @@ import { mapState } from "vuex";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
+import { TABLE_NAMES } from '@/constants'
+
 export default {
   components: {
     RoundEdit,
     PredictCard,
   },
-  computed: {
-    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
-  },
   watch: {
-    sharedRound() {
-      this.fetchAll();
-    },
-    selectedBox(val) {
-      const maxLength = this.checkboxList.length;
-      const emptyLength = this.checkboxList.filter((item) => item.disabled).length;
-      const cur = val.length
+    sharedRound: {
+      handler(newVal) {
+        if (!newVal) return;
+        if (!this.isActivated) return;
 
-      if (cur == maxLength) {
-        this.checkAll = true;
-        this.isIndeterminate = false;
-      } else if (cur == emptyLength) {
-        this.checkAll = false;
-        this.isIndeterminate = false;
-      } else {
-        this.checkAll = false;
-        this.isIndeterminate = true;
-      }
+        const isChange = newVal !== this.inputRound;
+        const isEmpty = !this.inputRound;
+        if (isChange || isEmpty) {
+          this.inputRound = newVal;
+        }
+        this.fetchBoth();
+      },
+      immediate: true,
     },
-    selectedBoxBias(val) {
-      const maxLength = this.checkboxList2.length;
-      const emptyLength = this.checkboxList2.filter((item) => item.disabled).length;
-      const cur = val.length
-
-      if (cur == maxLength) {
-        this.checkAllBias = true;
-        this.isIndeterminateBias = false;
-      } else if (cur == emptyLength) {
-        this.checkAllBias = false;
-        this.isIndeterminateBias = false;
-      } else {
-        this.checkAllBias = false;
-        this.isIndeterminateBias = true;
-      }
+  },
+  activated() {
+    this.isActivated = true;
+    if (this.sharedRound) {
+      this.inputRound = this.sharedRound;
+      this.fetchBoth();
     }
   },
+  deactivated() {
+    this.isActivated = false; 
+  },
   created() {
-    this.fetchData = debounce(this.fetchData, 500);
-    this.fetchDataBias = debounce(this.fetchDataBias, 500);
     this.initCheckbox();
+    this.fetchData = debounce(this.fetchData, 600)
+    this.fetchDataBias = debounce(this.fetchDataBias, 600)
   },
-  mounted() {
-    this.inputRound = this.sharedRound;
+  computed: {
+    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
+    // 全选checkbox
+    isAllChecked: {
+      get() {
+        return this.checkboxList.length === this.selectedBox.length;
+      },
+      set(trigger) {
+        this.handleCheckAll(trigger);
+      },
+    },
+    isAllCheckedBias: {
+      get() {
+        return this.checkboxList2.length === this.selectedBoxBias.length;
+      },
+      set(trigger) {
+        this.handleCheckAllBias(trigger);
+      },
+    },
+    isIndeterminate() {
+      const cur = this.selectedBox.length;
+      const max = this.checkboxList.length;
+      const min = this.checkboxList.filter((i) => i.disabled).length;
+      return min < cur && cur < max;
+    },
+    isIndeterminateBias() {
+      const cur = this.selectedBoxBias.length;
+      const max = this.checkboxList2.length;
+      const min = this.checkboxList2.filter((i) => i.disabled).length;
+      return min < cur && cur < max;
+    },
   },
+
   data() {
     return {
       inputRound: "",
+      isActivated: false,
+
       isEditing: false,
       isLoading: false,
       isLoadingBias: false,
-
-      tableName1: "pairstraight",
-      tableName2: "symstraight",
-      tableName3: "repeatstraight",
-      tableName4: "seqstraight",
-      tableName5: "pairbias",
-      tableName6: "symbias",
-      tableName7: "repeatbias",
-      tableName8: "seqbias",
 
       checkboxList: [],
       selectedBox: [],
@@ -119,42 +154,14 @@ export default {
       checkboxList2: [],
       selectedBoxBias: [],
       combineDataBias: {},
-
-      //全选框
-      checkAll: false,
-      isIndeterminate: false,
-
-      checkAllBias: false,
-      isIndeterminateBias: false,
     };
   },
 
   methods: {
-    initCheckbox() {
-      this.checkboxList = [
-        { label: "直线配对", value: this.tableName1, checked: true, disabled: true },
-        { label: "直线对称", value: this.tableName2, checked: true },
-        { label: "直线重复", value: this.tableName3, checked: true },
-        { label: "直线顺序", value: this.tableName4, checked: true },
-        { label: "斜线对称", value: this.tableName6, checked: true },
-        { label: "斜线重复", value: this.tableName7, checked: true },
-        { label: "斜线顺序", value: this.tableName8, checked: true },
-      ];
-      this.checkboxList2 = [
-        { label: "斜线配对", value: this.tableName5, checked: true, disabled: true },
-        { label: "直线对称", value: this.tableName2, checked: true },
-        { label: "直线重复", value: this.tableName3, checked: true },
-        { label: "直线顺序", value: this.tableName4, checked: true },
-        { label: "斜线对称", value: this.tableName6, checked: true },
-        { label: "斜线重复", value: this.tableName7, checked: true },
-        { label: "斜线顺序", value: this.tableName8, checked: true },
-      ];
-    },
     handleCheckAll(trigger) {
       if (trigger) {
         this.selectedBox = this.checkboxList.map((item) => item.value);
-      }
-      else {
+      } else {
         this.selectedBox = this.checkboxList
           .filter((item) => item.disabled)
           .map((item) => item.value);
@@ -164,8 +171,7 @@ export default {
     handleCheckAllBias(trigger) {
       if (trigger) {
         this.selectedBoxBias = this.checkboxList2.map((item) => item.value);
-      }
-      else {
+      } else {
         this.selectedBoxBias = this.checkboxList2
           .filter((item) => item.disabled)
           .map((item) => item.value);
@@ -175,7 +181,7 @@ export default {
     confirmRoundChange(innerRound) {
       this.$store.commit("SET_sharedRound", innerRound);
     },
-    async fetchAll() {
+    async fetchBoth() {
       await Promise.all([this.fetchData(), this.fetchDataBias()]);
     },
     async fetchData() {
@@ -212,9 +218,11 @@ export default {
           },
           { round: currentRound }
         );
-        this.inputRound = currentRound;
+        // this.inputRound = currentRound;
         this.combineData = mergeData;
       } catch (e) {
+        if (e.message === "canceled")
+          return;
         console.log(e);
       } finally {
         this.isLoading = false;
@@ -254,9 +262,11 @@ export default {
           },
           { round: currentRound }
         );
-        this.inputRound = currentRound;
+        // this.inputRound = currentRound;
         this.combineDataBias = mergeData;
       } catch (e) {
+        if (e.message === "canceled")
+          return;
         console.log(e);
       } finally {
         this.isLoadingBias = false;
@@ -274,6 +284,30 @@ export default {
         console.warn("JSON解析失败，返回空数组:", arr, e);
         return [];
       }
+    },
+    initCheckbox() {
+      this.checkboxList = [
+        { label: "直线配对", value: TABLE_NAMES.PAIR_STRAIGHT, checked: true, disabled: true },
+        { label: "直线对称", value: TABLE_NAMES.SYM_STRAIGHT, checked: true },
+        { label: "直线重复", value: TABLE_NAMES.REPEAT_STRAIGHT, checked: true },
+        { label: "直线顺序", value: TABLE_NAMES.SEQ_STRAIGHT, checked: true },
+        { label: "斜线对称", value: TABLE_NAMES.SYM_BIAS, checked: true },
+        { label: "斜线重复", value: TABLE_NAMES.REPEAT_BIAS, checked: true },
+        { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
+      ];
+      this.checkboxList2 = [
+        { label: "斜线配对", value: TABLE_NAMES.PAIR_BIAS, checked: true, disabled: true },
+        { label: "直线对称", value: TABLE_NAMES.SYM_STRAIGHT, checked: true },
+        { label: "直线重复", value: TABLE_NAMES.REPEAT_STRAIGHT, checked: true },
+        { label: "直线顺序", value: TABLE_NAMES.SEQ_STRAIGHT, checked: true },
+        { label: "斜线对称", value: TABLE_NAMES.SYM_BIAS, checked: true },
+        { label: "斜线重复", value: TABLE_NAMES.REPEAT_BIAS, checked: true },
+        { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
+      ];
+      this.selectedBox = this.checkboxList.filter((i) => i.checked).map((i) => i.value);
+      this.selectedBoxBias = this.checkboxList2
+        .filter((i) => i.checked)
+        .map((i) => i.value);
     },
   },
 };

@@ -32,6 +32,10 @@ import { api } from '@/api'
 import RoundEdit from '../components/RoundEdit.vue';
 import PredictCard from '../components/PredictCard.vue';
 
+import { TABLE_NAMES } from '@/constants'
+const { SEQ_STRAIGHT, SEQ_BIAS } = TABLE_NAMES
+
+
 export default {
 	components: {
 		RoundEdit,
@@ -40,27 +44,46 @@ export default {
 	computed: {
 		...mapState(['sharedRound'])
 	},
-	watch:{
-		sharedRound() {
-			this.fetchAllData()
-		},
-	},
+	  watch: {
+    sharedRound: {
+      handler(newVal) {
+        if (!newVal) return;
+        if (!this.isActivated) return;
+
+        const isChange = newVal !== this.inputRound;
+        const isEmpty = !this.inputRound;
+        if (isChange || isEmpty) {
+          this.inputRound = newVal;
+        }
+        this.fetchAllData();
+      },
+      immediate: true,
+    },
+  },
+  activated() {
+    this.isActivated = true;
+    if (this.sharedRound) {
+      this.inputRound = this.sharedRound;
+      this.fetchAllData();
+    }
+  },
+  deactivated() {
+    this.isActivated = false
+  },
   data() {
 		return {
 			inputRound: '',
+			isActivated: false,
+
 			isEditing: false,
 			isLoading: false,
 			combineData:{},
 		};
   },
-	mounted() {
-		this.inputRound = this.sharedRound
-  },
 	methods: {
 		confirmRoundChange(innerRound) {
 			this.$store.commit('SET_sharedRound', innerRound)
 		},
-
 		async fetchData(tableName) {
 			const res = await api.getPredict(tableName, this.sharedRound)
 			return res.data[0]
@@ -70,14 +93,16 @@ export default {
 			this.isLoading = true
 			try {
 				const [straight, bias] = await Promise.all([
-          this.fetchData('seqstraight'),
-          this.fetchData('seqbias')
+          this.fetchData(SEQ_STRAIGHT),
+          this.fetchData(SEQ_BIAS)
 				])
 				this.generateCombineData(straight, bias)
 				this.inputRound = straight.round || bias.round 
 			} catch (e) {
+				if (e.message === "canceled")
+          return;
 				console.log(e)
-				this.$store.dispatch('getLatestRound')
+				// this.$store.dispatch('getLatestRound')
 			} finally {
 				this.isLoading = false
 			}

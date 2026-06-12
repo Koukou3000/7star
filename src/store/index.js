@@ -29,4 +29,6 @@ const store = new Vuex.Store({
   }
 })
 
+store.dispatch('getLatestRound');
+
 export default store
