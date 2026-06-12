@@ -45,7 +45,6 @@ export default {
     return {
       page: 0,
       pageSize: 15,
-      abortController: null,
       isLoading: false,
 
       map:[],
@@ -66,31 +65,15 @@ export default {
   activated() {
     this.getResult();
   },
-  deactivated() {
-    if (this.abortController) {
-      this.abortController.abort("tab切换离开页面");
-    }
-  },
-  beforeDestroy() {
-    if (this.abortController) {
-      this.abortController.abort("组件销毁，取消未完成请求");
-    }
-  },
   methods: {
     async getResult() {
       if (this.isLoading || !this.hasMore) return;
-      if (this.abortController) {
-        this.abortController.abort();
-      }
-      // 创建全新的控制器
-      this.abortController = new AbortController();
       this.isLoading = true;
 
       try {
         const resp = await api.getResults(
           this.start,
           this.pageSize,
-          this.abortController.signal
         );
         const newlines = resp.data;
         const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
@@ -105,8 +88,7 @@ export default {
           this.hasMore = false;
         }
       } catch (e) {
-        if (e.message === "canceled")
-          return;
+        if (e && e.message === "canceled") return; // axios.isCancel(e) 
         console.log(e);
       } finally {
         this.isLoading = false;
