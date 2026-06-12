@@ -37,7 +37,6 @@
 </template>
 
 <script>
-import axios from "axios";
 import { api } from "../api";
 
 export default {
@@ -79,7 +78,7 @@ export default {
   },
   methods: {
     async getResult() {
-      // if (this.isLoading || !this.hasMore) return;
+      if (this.isLoading || !this.hasMore) return;
       if (this.abortController) {
         this.abortController.abort();
       }
@@ -106,17 +105,14 @@ export default {
           this.hasMore = false;
         }
       } catch (e) {
-        if (axios.isCancel(e)) {
+        if (e.message === "canceled")
           return;
-        }
         console.log(e);
       } finally {
         this.isLoading = false;
       }
     },
     getMoreResult() {
-      if (this.isLoading || !this.hasMore) return;
-      this.isLoading = true;
       this.page += 1;
       this.getResult();
     },
