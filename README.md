@@ -1,12 +1,13 @@
 ## 功能迭代待办清单
 
 ### fix
-- [x] 切换页面时cancel多余请求【路由守卫+拦截器】
-- [ ] 页面keep-alive时，watch数据变化仍然请求
+- [x] 切换页面时cancel多余请求  【路由守卫+拦截器】
+- [x] 组件keep-alive，watch在后台监听到变化 【添加isActivated变量用于控制】
+- [x] 统一管理各页面的tableName 【引用单一数据源@/constants】
 - [ ] CombinePredict请求冗余（14个请求，实际上只需要8次）
-- [ ] 统一管理各页面的tableName
-- [ ] 给每个页面的请求设计失败场景
 - [ ] 将CombinePredict的勾选记录存储在本地
+
+- [ ] 给每个页面的请求设计失败场景
 - [ ] 调整 elementUI 为按需引入
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
 

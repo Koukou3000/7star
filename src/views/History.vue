@@ -47,7 +47,6 @@ export default {
       pageSize: 15,
       isLoading: false,
 
-      map:[],
       results: [],
       hasMore: true,
     };

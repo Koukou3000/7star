@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { server } from '@/utils/config.js'
+import { server } from '@/config'
 
 const service = axios.create({
   baseURL: server,
@@ -16,7 +16,7 @@ function getRequestKey(config) {
 
 export function clearAllPendingRequests(reason) {
   reqMap.forEach((controller) => {
-    controller.abort('tab切换离开页面')
+    controller.abort(reason)
   })
   reqMap.clear()
 }

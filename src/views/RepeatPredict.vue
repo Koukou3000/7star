@@ -22,6 +22,9 @@ import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
+import { TABLE_NAMES } from '@/constants'
+const { REPEAT_STRAIGHT, REPEAT_BIAS } = TABLE_NAMES
+
 export default {
   components: {
     RoundEdit,
@@ -80,8 +83,8 @@ export default {
       this.isLoading = true;
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData("repeatstraight"),
-          this.fetchData("repeatbias"),
+          this.fetchData(REPEAT_STRAIGHT),
+          this.fetchData(REPEAT_BIAS),
         ]);
         this.generateCombineData(straight, bias);
         this.inputRound = straight.round || bias.round;

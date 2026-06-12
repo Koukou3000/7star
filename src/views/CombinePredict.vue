@@ -67,6 +67,8 @@ import { mapState } from "vuex";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
+import { TABLE_NAMES } from '@/constants'
+
 export default {
   components: {
     RoundEdit,
@@ -144,15 +146,6 @@ export default {
       isEditing: false,
       isLoading: false,
       isLoadingBias: false,
-
-      tableName1: "pairstraight",
-      tableName2: "symstraight",
-      tableName3: "repeatstraight",
-      tableName4: "seqstraight",
-      tableName5: "pairbias",
-      tableName6: "symbias",
-      tableName7: "repeatbias",
-      tableName8: "seqbias",
 
       checkboxList: [],
       selectedBox: [],
@@ -290,22 +283,22 @@ export default {
     },
     initCheckbox() {
       this.checkboxList = [
-        { label: "直线配对", value: this.tableName1, checked: true, disabled: true },
-        { label: "直线对称", value: this.tableName2, checked: true },
-        { label: "直线重复", value: this.tableName3, checked: true },
-        { label: "直线顺序", value: this.tableName4, checked: true },
-        { label: "斜线对称", value: this.tableName6, checked: true },
-        { label: "斜线重复", value: this.tableName7, checked: true },
-        { label: "斜线顺序", value: this.tableName8, checked: true },
+        { label: "直线配对", value: TABLE_NAMES.PAIR_STRAIGHT, checked: true, disabled: true },
+        { label: "直线对称", value: TABLE_NAMES.SYM_STRAIGHT, checked: true },
+        { label: "直线重复", value: TABLE_NAMES.REPEAT_STRAIGHT, checked: true },
+        { label: "直线顺序", value: TABLE_NAMES.SEQ_STRAIGHT, checked: true },
+        { label: "斜线对称", value: TABLE_NAMES.SYM_BIAS, checked: true },
+        { label: "斜线重复", value: TABLE_NAMES.REPEAT_BIAS, checked: true },
+        { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
       ];
       this.checkboxList2 = [
-        { label: "斜线配对", value: this.tableName5, checked: true, disabled: true },
-        { label: "直线对称", value: this.tableName2, checked: true },
-        { label: "直线重复", value: this.tableName3, checked: true },
-        { label: "直线顺序", value: this.tableName4, checked: true },
-        { label: "斜线对称", value: this.tableName6, checked: true },
-        { label: "斜线重复", value: this.tableName7, checked: true },
-        { label: "斜线顺序", value: this.tableName8, checked: true },
+        { label: "斜线配对", value: TABLE_NAMES.PAIR_BIAS, checked: true, disabled: true },
+        { label: "直线对称", value: TABLE_NAMES.SYM_STRAIGHT, checked: true },
+        { label: "直线重复", value: TABLE_NAMES.REPEAT_STRAIGHT, checked: true },
+        { label: "直线顺序", value: TABLE_NAMES.SEQ_STRAIGHT, checked: true },
+        { label: "斜线对称", value: TABLE_NAMES.SYM_BIAS, checked: true },
+        { label: "斜线重复", value: TABLE_NAMES.REPEAT_BIAS, checked: true },
+        { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
       ];
       this.selectedBox = this.checkboxList.filter((i) => i.checked).map((i) => i.value);
       this.selectedBoxBias = this.checkboxList2

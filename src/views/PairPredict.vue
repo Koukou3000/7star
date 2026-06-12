@@ -23,10 +23,14 @@ import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
+import { TABLE_NAMES } from '@/constants'
+const { PAIR_STRAIGHT, PAIR_BIAS } = TABLE_NAMES
+
 export default {
   components: {
     RoundEdit,
     PredictCard,
+    
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
@@ -35,13 +39,10 @@ export default {
     sharedRound: {
       immediate: true,
       handler(newVal) {
-        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求与网络竞态导致的数据错乱
-        if (!this.isActivated) return;
-        
         // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
         if (!newVal) return;
-
-        
+        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
+        if (!this.isActivated) return;
 
         // 只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
         // 或者是局部输入框为空时，才将全局期数同步给局部输入框。
@@ -54,6 +55,7 @@ export default {
       },
     },
   },
+
   activated() {
     this.isActivated = true;
     if (!this.sharedRound) return;
@@ -88,8 +90,8 @@ export default {
       this.isLoading = true;
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData("pairstraight"),
-          this.fetchData("pairbias"),
+          this.fetchData(PAIR_STRAIGHT),
+          this.fetchData(PAIR_BIAS),
         ]);
         this.straightData = straight;
         this.biasData = bias;
