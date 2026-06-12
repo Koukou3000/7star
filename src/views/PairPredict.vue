@@ -30,7 +30,6 @@ export default {
   components: {
     RoundEdit,
     PredictCard,
-    
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
@@ -44,10 +43,8 @@ export default {
         // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
         if (!this.isActivated) return;
 
-        // 只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
-        // 或者是局部输入框为空时，才将全局期数同步给局部输入框。
-        const isChange = newVal !== this.inputRound;
-        const isEmpty = !this.inputRound;
+        const isChange = newVal !== this.inputRound;  // 只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
+        const isEmpty = !this.inputRound; // 或者是局部输入框为空时，才将全局期数同步给局部输入框。
         if (isChange || isEmpty) {
           this.inputRound = newVal;
         }
@@ -83,7 +80,7 @@ export default {
       this.$store.commit("SET_sharedRound", innerRound);
     },
     async fetchData(tableName) {
-      console.log(typeof this.sharedRound) 
+      // console.log(typeof this.sharedRound) 
       const res = await api.getPredict( tableName, this.sharedRound );
       return res.data[0];
     },

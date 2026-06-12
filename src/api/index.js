@@ -15,6 +15,7 @@ function getRequestKey(config) {
 }
 
 export function clearAllPendingRequests(reason) {
+  console.log(reqMap)
   reqMap.forEach((controller) => {
     controller.abort(reason)
   })

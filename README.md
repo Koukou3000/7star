@@ -3,13 +3,14 @@
 ### fix
 - [x] 切换页面时cancel多余请求  【路由守卫+拦截器】
 - [x] 组件keep-alive，watch在后台监听到变化 【添加isActivated变量用于控制】
-- [x] 统一管理各页面的tableName 【引用单一数据源@/constants】
+- [x] 统一管理各页面的tableName 【引用单一数据源@/constants】 
+- [ ] 请求中切换期号，防抖会拦截请求发送失败；不防抖则会出现数据异步竞态问题（Race Condition）
 - [ ] CombinePredict请求冗余（14个请求，实际上只需要8次）
-- [ ] 将CombinePredict的勾选记录存储在本地
 
 - [ ] 给每个页面的请求设计失败场景
 - [ ] 调整 elementUI 为按需引入
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
+- [ ] 将CombinePredict的勾选记录存储在本地（localstorage）
 
 
 ### feature
