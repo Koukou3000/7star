@@ -8,7 +8,7 @@ const service = axios.create({
 
 const reqMap = new Map()
 
-// //  参数拼接后一致的，视为同一个请求
+// 参数拼接后一致的，视为同一个请求
 function getRequestKey(config) {
   const { method, url, params, data } = config;
   return [method, url, JSON.stringify(params), JSON.stringify(data)].join('&')
@@ -51,12 +51,10 @@ service.interceptors.response.use(
 // 请求原始数据
 export const api = {
   getLatestRound: () => service.get('/api/latestRound'),
-  getResults: (start, end, signal) => service.get('/api/results', {
-    params:{ start, end },
-    signal
-  }),
-  getPredict: (tableName, round, signal) => service.get('/api/predict', {
-    params: { tableName, round },
-    signal
-  })
+  getResults: (start, end) => service.get('/api/results',{
+      params: { start, end },
+    }),
+  getPredict: (tableName, round) => service.get('/api/predict',{
+      params: { tableName, round },
+    })
 }

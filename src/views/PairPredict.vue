@@ -35,14 +35,16 @@ export default {
     sharedRound: {
       immediate: true,
       handler(newVal) {
+        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求与网络竞态导致的数据错乱
+        if (!this.isActivated) return;
+        
         // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
         if (!newVal) return;
 
-        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求与网络竞态导致的数据错乱
-        if (!this.isActivated) return;
+        
 
         // 只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
-        // 或者是局部输入框为空时，我们才强制将全局期数同步给局部输入框。
+        // 或者是局部输入框为空时，才将全局期数同步给局部输入框。
         const isChange = newVal !== this.inputRound;
         const isEmpty = !this.inputRound;
         if (isChange || isEmpty) {
@@ -60,14 +62,6 @@ export default {
   },
   deactivated() {
     this.isActivated = false;
-    if (this.abortController) {
-      this.abortController.abort();
-    }
-  },
-  beforeDestroy() {
-    if (this.abortController) {
-      this.abortController.abort("组件销毁，取消未完成请求");
-    }
   },
   data() {
     return {
@@ -77,8 +71,7 @@ export default {
 
       // 避免冗余网络请求
       isActivated: false,
-      abortController: null,
-
+     
       straightData: {},
       biasData: {},
     };
@@ -88,18 +81,10 @@ export default {
       this.$store.commit("SET_sharedRound", innerRound);
     },
     async fetchData(tableName) {
-      const res = await api.getPredict(
-        tableName,
-        this.sharedRound,
-        this.abortController.signal
-      );
+      const res = await api.getPredict( tableName, this.sharedRound );
       return res.data[0];
     },
     async fetchAllData() {
-      if (this.abortController) {
-        this.abortController.abort();
-      }
-      this.abortController = new AbortController();
       this.isLoading = true;
       try {
         const [straight, bias] = await Promise.all([

@@ -71,10 +71,7 @@ export default {
       this.isLoading = true;
 
       try {
-        const resp = await api.getResults(
-          this.start,
-          this.pageSize,
-        );
+        const resp = await api.getResults(this.start, this.pageSize);
         const newlines = resp.data;
         const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
 
