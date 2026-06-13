@@ -16,7 +16,8 @@
           >全选</el-checkbox
         >
 
-        <el-checkbox-group v-model="selectedBox" @change="fetchDataStraight">
+        <!-- <el-checkbox-group v-model="selectedBox" @change="handleChange"> -->
+        <el-checkbox-group v-model="selectedBox">
           <el-checkbox
             v-for="item in checkboxList"
             :key="item.value"
@@ -26,7 +27,6 @@
             {{ item.label }}
           </el-checkbox>
         </el-checkbox-group>
-
         <PredictCard title="直线" :data="combineData" :showRound="inputRound" />
       </div>
 
@@ -40,7 +40,7 @@
           >全选</el-checkbox
         >
 
-        <el-checkbox-group v-model="selectedBoxBias" @change="fetchDataBias">
+        <el-checkbox-group v-model="selectedBoxBias">
           <el-checkbox
             v-for="item in checkboxList2"
             :key="item.value"
@@ -52,7 +52,9 @@
         </el-checkbox-group>
         <PredictCard title="斜线" :data="combineDataBias" :showRound="inputRound" />
       </div>
+
     </div>
+    
   </div>
 </template>
 
@@ -103,6 +105,16 @@ export default {
       },
       immediate: true,
     },
+    selectedBox: {
+      handler: debounce(function () {
+        this.fetchDataStraight()
+      },700)
+    },
+    selectedBoxBias: {
+      handler: debounce(function() {
+        this.fetchDataBias()
+      },700)
+    }
   },
   activated() {
     this.isActivated = true;
@@ -115,15 +127,12 @@ export default {
   },
   created() {
     this.initCheckbox();
-    this.fetchDataStraight = debounce(this.fetchDataStraight, 300);
-    this.fetchDataBias = debounce(this.fetchDataBias, 300);
   },
   computed: {
-    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
-    // 全选checkbox
+    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}  
     isAllChecked: {
       get() {
-        return CHECKBOX_STRAIGHT.length === this.selectedBox.length;
+        return CHECKBOX_STRAIGHT.length === this.selectedBox.length; // 全选checkbox
       },
       set(bool) {
         this.handleCheckAll(bool);
@@ -169,13 +178,16 @@ export default {
   },
 
   methods: {
+    confirmRoundChange(innerRound) {
+      this.$store.commit("SET_sharedRound", innerRound);
+    },
+
     handleCheckAll(bool) {
       if (bool) {
         this.selectedBox = CHECKBOX_STRAIGHT.map((item) => item.value);
       } else {
         this.selectedBox = CHECKBOX_STRAIGHT.filter((item) => item.disabled).map((item) => item.value);
       }
-      this.fetchDataStraight();
     },
     handleCheckAllBias(bool) {
       if (bool) {
@@ -183,23 +195,21 @@ export default {
       } else {
         this.selectedBoxBias = CHECKBOX_BIAS.filter((item) => item.disabled).map((item) => item.value);
       }
-      this.fetchDataBias();
     },
-    confirmRoundChange(innerRound) {
-      this.$store.commit("SET_sharedRound", innerRound);
-    },
-
+    
     // 1. 公共的合并计算逻辑
-    processPredictData(predicts, currentRound) {
+    processCombineData(predicts, currentRound) {
       return predicts.reduce(
         (acc, predict) => {
           let item = predict.data[0];
 
           FIELDS.forEach((field) => {
-            // myriabit = [1,2]+[2,3]
-            acc[field] = [
-              ...new Set([...this.safeParse(acc[field]), ...this.safeParse(item[field])]),
+          
+            acc[field] = [ ...new Set([
+                ...this.safeParse(acc[field]),
+                ...this.safeParse(item[field])]),  // myriabit = [1,2]+[2,3]
             ].sort((a, b) => a - b);
+
             acc[`${field}_hit`] = this.getHitStats(
               acc[`${field}_hit`],
               item[`${field}_hit`]
@@ -212,24 +222,28 @@ export default {
     },
     // 2. 统一的请求处理器（这是通用模版）
     async fetchData(tableNameArr, currentRound, dataKey, loadingKey) {
-      if (this[loadingKey]) return;
       this[loadingKey] = true;
       try {
         const promises = tableNameArr.map((tableName) =>
           api.getPredict(tableName, currentRound)
         );
         const predicts = await Promise.all(promises);
-        const mergeData = this.processPredictData(predicts, currentRound);
-        this[dataKey] = mergeData;
+        const mergeData = this.processCombineData(predicts, currentRound);
+      
+        if (currentRound === this.sharedRound) {
+          this[dataKey] = mergeData;
+        } else {
+          console.warn(`⏳ 拦截到过期数据: 请求期号 ${currentRound}, 但用户已切换到 ${this.sharedRound}`);
+        }
       } catch (e) {
         if (e.message === "canceled") return;
-        console.log(e);
+        this.$store.dispatch('getLatestRound');
       } finally {
+        if(currentRound !== this.sharedRound) return
         this[loadingKey] = false;
       }
     },
-
-    // 3. 对外暴露的简洁方法【现在还未修改】
+    // 3. 对外暴露的简洁方法
     async fetchDataStraight() {
       this.fetchData(this.selectedBox, this.sharedRound, "combineData", "isLoading");
     },
@@ -239,7 +253,6 @@ export default {
     async fetchBoth() {
       await Promise.all([this.fetchDataStraight(), this.fetchDataBias()]);
     },
-
     getHitStats(a, b) {
       if (a === 1 || b === 1) return 1;
       if (a === 2 || b === 2) return 2;
