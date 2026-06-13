@@ -90,41 +90,9 @@ export default {
     RoundEdit,
     PredictCard,
   },
-  watch: {
-    sharedRound: {
-      handler(newVal) {
-        if (!newVal || !this.isActivated) return;
-        const isChange = newVal !== this.inputRound;
-        const isEmpty = !this.inputRound;
-        
-        if (isChange || isEmpty) {
-          this.inputRound = newVal;
-        }
-
-        // 拦截由于 selectedList 变更导致的请求
-        if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
-        if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
-        this.fetchBoth();
-      },
-      immediate: true,
-    },
-    selectedList: {
-      handler() {
-        this.debouncedFetchStraight()
-      },
-      deep: true,
-    },
-    selectedListBias: {
-      handler() {
-        this.debouncedFetchBias()
-      },
-      deep: true
-    }
-  },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}  
     
-    // 全选checkbox
     isAllChecked: {
       get() {
         return CHECKBOX_STRAIGHT.length === this.selectedList.length; 
@@ -171,31 +139,58 @@ export default {
       combineDataBias: {},
     };
   },
+  watch: {
+    sharedRound: {
+      handler(newVal) {
+        if (!newVal || !this.isActivated) return;
+        const isChange = newVal !== this.inputRound;
+        const isEmpty = !this.inputRound;
+        
+        if (isChange || isEmpty) {
+          this.inputRound = newVal;
+        }
+        this.cancelAllPendingDebounce() // 拦截请求
+        this.fetchBoth() // 重发请求
+      },
+      immediate: true,
+    },
+    selectedList: {
+      handler() {
+        this.debouncedFetchStraight()
+      },
+      deep: true,
+    },
+    selectedListBias: {
+      handler() {
+        this.debouncedFetchBias()
+      },
+      deep: true
+    },
+    inputRound: {
+      handler() {
+        this.cancelAllPendingDebounce() 
+      }
+    }
+  },
   created() {
-    // 用于控制 selectedBox 相关请求
+    // 多选框防抖（selectedBox）
     this.debouncedFetchStraight = debounce(function () {
       this.fetchDataStraight();
     }, 700);
-
     this.debouncedFetchBias = debounce(function () {
       this.fetchDataBias();
     }, 700);
   },
+
   activated() {
     this.isActivated = true;
-    if (!this.sharedRound) return;
-
-    if (this.inputRound !== this.sharedRound) {
-      // 拦截由于 selectedList 变更导致的请求
-      if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
-      if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
-      this.fetchBoth()
-      this.inputRound = this.sharedRound;
-    }
+    if (!this.sharedRound) return; // shareRound 非空时才请求
+    this.inputRound = this.sharedRound; // 应在fetchData前运行，否则 PredictCard 显示受影响【？】
+    this.cancelAllPendingDebounce() // 拦截请求
+    this.fetchBoth() // 重发请求
   },
   deactivated() {
-    if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
-    if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
+    this.cancelAllPendingDebounce()
     this.isActivated = false;
   },
 
@@ -204,22 +199,47 @@ export default {
       this.$store.commit("SET_sharedRound", innerRound);
     },
 
-    handleCheckAll(bool) {
-      if (bool) {
-        this.selectedList = CHECKBOX_STRAIGHT.map((item) => item.value);
-      } else {
-        this.selectedList = CHECKBOX_STRAIGHT.filter((item) => item.disabled).map((item) => item.value);
+    // 拦截由于 selectedList 变更导致的请求
+    cancelAllPendingDebounce() { 
+      if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
+      if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
+    },
+    async fetchBoth() {
+      await Promise.all([
+        this.fetchDataStraight(),
+        this.fetchDataBias()]
+      );
+    },
+    // 1. 对外暴露的简洁方法
+    async fetchDataStraight() {
+      this.fetchData(this.selectedList, this.sharedRound, "combineData", "isLoading");
+    },
+    async fetchDataBias() {
+      this.fetchData(this.selectedListBias,this.sharedRound,"combineDataBias","isLoadingBias");
+    },
+    // 2. 统一的请求处理器（这是通用模版）
+    async fetchData(tableNameArr, currentRound, dataKey, loadingKey) {
+      this[loadingKey] = true;
+      try {
+        const promises = tableNameArr.map((tableName) =>
+          api.getPredict(tableName, currentRound)
+        );
+        const predicts = await Promise.all(promises);
+        const mergeData = this.processCombineData(predicts, currentRound);
+        if (currentRound === this.sharedRound) {
+          this[dataKey] = mergeData;
+        } else {
+          console.warn(`⏳ 拦截到过期数据: 请求期号 ${currentRound}, 但用户已切换到 ${this.sharedRound}`);
+        }
+      } catch (e) {
+        if (e.message === "canceled") return;
+        this.$store.dispatch('getLatestRound');
+      } finally {
+        if(currentRound !== this.sharedRound) return
+        this[loadingKey] = false;
       }
     },
-    handleCheckAllBias(bool) {
-      if (bool) {
-        this.selectedListBias = CHECKBOX_BIAS.map((item) => item.value);
-      } else {
-        this.selectedListBias = CHECKBOX_BIAS.filter((item) => item.disabled).map((item) => item.value);
-      }
-    },
-    
-    // 1. 公共的合并计算逻辑
+    // 3. 公共的合并计算逻辑
     processCombineData(predicts, currentRound) {
       return predicts.reduce(
         (acc, predict) => {
@@ -242,38 +262,20 @@ export default {
         { round: currentRound }
       );
     },
-    // 2. 统一的请求处理器（这是通用模版）
-    async fetchData(tableNameArr, currentRound, dataKey, loadingKey) {
-      this[loadingKey] = true;
-      try {
-        const promises = tableNameArr.map((tableName) =>
-          api.getPredict(tableName, currentRound)
-        );
-        const predicts = await Promise.all(promises);
-        const mergeData = this.processCombineData(predicts, currentRound);
-      
-        if (currentRound === this.sharedRound) {
-          this[dataKey] = mergeData;
-        } else {
-          console.warn(`⏳ 拦截到过期数据: 请求期号 ${currentRound}, 但用户已切换到 ${this.sharedRound}`);
-        }
-      } catch (e) {
-        if (e.message === "canceled") return;
-        this.$store.dispatch('getLatestRound');
-      } finally {
-        if(currentRound !== this.sharedRound) return
-        this[loadingKey] = false;
+
+    handleCheckAll(bool) {
+      if (bool) {
+        this.selectedList = CHECKBOX_STRAIGHT.map((item) => item.value);
+      } else {
+        this.selectedList = CHECKBOX_STRAIGHT.filter((item) => item.disabled).map((item) => item.value);
       }
     },
-    // 3. 对外暴露的简洁方法
-    async fetchDataStraight() {
-      this.fetchData(this.selectedList, this.sharedRound, "combineData", "isLoading");
-    },
-    async fetchDataBias() {
-      this.fetchData(this.selectedListBias,this.sharedRound,"combineDataBias","isLoadingBias");
-    },
-    async fetchBoth() {
-      await Promise.all([this.fetchDataStraight(), this.fetchDataBias()]);
+    handleCheckAllBias(bool) {
+      if (bool) {
+        this.selectedListBias = CHECKBOX_BIAS.map((item) => item.value);
+      } else {
+        this.selectedListBias = CHECKBOX_BIAS.filter((item) => item.disabled).map((item) => item.value);
+      }
     },
     getHitStats(a, b) {
       if (a === 1 || b === 1) return 1;

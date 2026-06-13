@@ -7,7 +7,7 @@ const service = axios.create({
 })
 
 // 管理所有请求的 abortController
-const pendingPromises = new Map()
+const requestControllers = new Map()
 
 // 仅管理 getPredict 时产生的请求
 const predictPromises = new Map()
@@ -18,10 +18,11 @@ function getRequestKey(config) {
 }
 
 export function clearAllPendingRequests(reason) {
-  pendingPromises.forEach((controller) => {
+  requestControllers.forEach((controller) => {
     controller.abort(reason)
   })
-  pendingPromises.clear()
+  requestControllers.clear() 
+  predictPromises.clear() 
 }
 
 // 给请求分配 abortController
@@ -29,8 +30,8 @@ service.interceptors.request.use(
   function (cfg) { 
     const key = getRequestKey(cfg)
     const controller = new AbortController()
-    pendingPromises.set(key, controller)
-    cfg.signal = cfg.signal || controller.signal // 用于控制中止请求
+    requestControllers.set(key, controller)
+    cfg.signal = cfg.signal || controller.signal // 优先使用请求参数中的signal
     return cfg
   },
   function (err) {
@@ -42,18 +43,17 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   function (resp) {
     const key = getRequestKey(resp.config)
-    pendingPromises.delete(key)
+    // 收到服务器响应，已经不再需要通过abort()释放连接
+    requestControllers.delete(key) 
     return resp
   },
   function (err) {
     if (err.config) {
       const key = getRequestKey(err.config)
-      pendingPromises.delete(key)
+      requestControllers.delete(key) 
     }
     return Promise.reject(err)
   })
-
-
 
 // 请求原始数据
 export const api = {
@@ -70,17 +70,20 @@ export const api = {
     if (predictPromises.has(key)) {
       return predictPromises.get(key)
     }
-    
     const promise = service.get('/api/predict', {
       params: { tableName, round },
-    }).finally(() => {
-      // 一旦返回就从map中清除，保证新请求不受影响
-      predictPromises.delete(key)
     })
-
+      .then((res) => {
+        predictPromises.delete(key)
+        return res
+      })
+      .catch((err) => {
+        // 网络报错时（非路由切页取消），按原计划及时移出
+        predictPromises.delete(key)
+        return Promise.reject(err)
+      })
     // key不同时，请求放入map
     predictPromises.set(key, promise)
-
     return promise    
   }
     
