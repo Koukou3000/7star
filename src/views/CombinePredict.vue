@@ -104,7 +104,6 @@ export default {
         // 拦截由于 selectedList 变更导致的请求
         if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
         if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
-        console.log('shareRound -> fetchBoth')
         this.fetchBoth();
       },
       immediate: true,
@@ -175,7 +174,6 @@ export default {
   created() {
     // 用于控制 selectedBox 相关请求
     this.debouncedFetchStraight = debounce(function () {
-      console.log('selectedList -> fetchStraight')
       this.fetchDataStraight();
     }, 700);
 
@@ -191,8 +189,6 @@ export default {
       // 拦截由于 selectedList 变更导致的请求
       if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
       if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
-
-      console.log('activated -> fetchBoth')
       this.fetchBoth()
       this.inputRound = this.sharedRound;
     }
