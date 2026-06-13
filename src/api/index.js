@@ -17,14 +17,6 @@ function getRequestKey(config) {
   return [method, url, JSON.stringify(params), JSON.stringify(data)].join('&')
 }
 
-export function clearAllPendingRequests(reason) {
-  requestControllers.forEach((controller) => {
-    controller.abort(reason)
-  })
-  requestControllers.clear() 
-  predictPromises.clear() 
-}
-
 // 给请求分配 abortController
 service.interceptors.request.use(
   function (cfg) { 
@@ -36,8 +28,7 @@ service.interceptors.request.use(
   },
   function (err) {
     return Promise.reject(err)
-   }
-)
+   })
 
 // 去除请求的 abortController
 service.interceptors.response.use(
@@ -55,6 +46,17 @@ service.interceptors.response.use(
     return Promise.reject(err)
   })
 
+export function clearAllPendingRequests(fromName, toName, reason) {
+  // 从部分页进入综合页时，允许复用请求
+  if (toName === 'CombinePredict' && fromName !== 'History') return
+
+  requestControllers.forEach((controller) => {
+    controller.abort(reason) // cancel所有请求
+  })
+  requestControllers.clear() // 清理所有key，便于新请求加入
+  predictPromises.clear() // 清理Promise对象，以免其他页面复用到cancel后数据为空的Promise
+}
+  
 // 请求原始数据
 export const api = {
   getLatestRound: () => service.get('/api/latestRound'),
@@ -78,7 +80,7 @@ export const api = {
         return res
       })
       .catch((err) => {
-        // 网络报错时（非路由切页取消），按原计划及时移出
+        // 网络报错时（非路由切页取消），按原计划及时移除
         predictPromises.delete(key)
         return Promise.reject(err)
       })
@@ -86,5 +88,5 @@ export const api = {
     predictPromises.set(key, promise)
     return promise    
   }
-    
+
 }
