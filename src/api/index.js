@@ -12,6 +12,15 @@ const requestControllers = new Map()
 // 仅管理 getPredict 时产生的请求
 const predictPromises = new Map()
 
+// cancel所有未响应请求
+export function clearAllPendingRequests(fromName, toName, reason) {
+  requestControllers.forEach((controller) => {
+    controller.abort(reason) 
+  })
+  requestControllers.clear() // 清理所有key，便于新请求加入
+  predictPromises.clear() // 清理Promise对象，以免复用到cancel后数据为空的Promise
+}
+
 function getRequestKey(config) {
   const { method, url, params, data } = config; // 参数拼接后一致的，视为同一个请求
   return [method, url, JSON.stringify(params), JSON.stringify(data)].join('&')
@@ -46,16 +55,7 @@ service.interceptors.response.use(
     return Promise.reject(err)
   })
 
-export function clearAllPendingRequests(fromName, toName, reason) {
-  // 从部分页进入综合页时，允许复用请求
-  if (toName === 'CombinePredict' && fromName !== 'History') return
 
-  requestControllers.forEach((controller) => {
-    controller.abort(reason) // cancel所有请求
-  })
-  requestControllers.clear() // 清理所有key，便于新请求加入
-  predictPromises.clear() // 清理Promise对象，以免其他页面复用到cancel后数据为空的Promise
-}
   
 // 请求原始数据
 export const api = {

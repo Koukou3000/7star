@@ -49,7 +49,7 @@ const router = new VueRouter({
 router.beforeEach((to, from, next) => {
   // 💡 只要不是第一次冷启动进站（from.path有值），并且用户确实切换到了不同的页面，就清除所有pending请求
   if(from.name && from.name !== to.name){
-    clearAllPendingRequests(from.name, to.name, '切页取消请求') 
+    clearAllPendingRequests(from.name, to.name, '切换页面cancel所有未响应请求') 
   }
   next()
 })
