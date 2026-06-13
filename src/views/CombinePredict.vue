@@ -16,8 +16,7 @@
           >全选</el-checkbox
         >
 
-        <!-- <el-checkbox-group v-model="selectedBox" @change="handleChange"> -->
-        <el-checkbox-group v-model="selectedBox">
+        <el-checkbox-group v-model="selectedList">
           <el-checkbox
             v-for="item in checkboxList"
             :key="item.value"
@@ -40,7 +39,7 @@
           >全选</el-checkbox
         >
 
-        <el-checkbox-group v-model="selectedBoxBias">
+        <el-checkbox-group v-model="selectedListBias">
           <el-checkbox
             v-for="item in checkboxList2"
             :key="item.value"
@@ -94,45 +93,42 @@ export default {
   watch: {
     sharedRound: {
       handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
+        if (!newVal || !this.isActivated) return;
         const isChange = newVal !== this.inputRound;
         const isEmpty = !this.inputRound;
+        
         if (isChange || isEmpty) {
           this.inputRound = newVal;
         }
+
+        // 拦截由于 selectedList 变更导致的请求
+        if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
+        if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
+        console.log('shareRound -> fetchBoth')
         this.fetchBoth();
       },
       immediate: true,
     },
-    selectedBox: {
-      handler: debounce(function () {
-        this.fetchDataStraight()
-      },700)
+    selectedList: {
+      handler() {
+        this.debouncedFetchStraight()
+      },
+      deep: true,
     },
-    selectedBoxBias: {
-      handler: debounce(function() {
-        this.fetchDataBias()
-      },700)
+    selectedListBias: {
+      handler() {
+        this.debouncedFetchBias()
+      },
+      deep: true
     }
-  },
-  activated() {
-    this.isActivated = true;
-    if (!this.sharedRound) return;
-    this.inputRound = this.sharedRound;
-    this.fetchBoth();
-  },
-  deactivated() {
-    this.isActivated = false;
-  },
-  created() {
-    this.initCheckbox();
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}  
+    
+    // 全选checkbox
     isAllChecked: {
       get() {
-        return CHECKBOX_STRAIGHT.length === this.selectedBox.length; // 全选checkbox
+        return CHECKBOX_STRAIGHT.length === this.selectedList.length; 
       },
       set(bool) {
         this.handleCheckAll(bool);
@@ -140,7 +136,7 @@ export default {
     },
     isAllCheckedBias: {
       get() {
-        return CHECKBOX_BIAS.length === this.selectedBoxBias.length;
+        return CHECKBOX_BIAS.length === this.selectedListBias.length;
       },
       set(bool) {
         this.handleCheckAllBias(bool);
@@ -149,13 +145,13 @@ export default {
     isIndeterminate() {
       const max = CHECKBOX_STRAIGHT.length;
       const min = CHECKBOX_STRAIGHT.filter((i) => i.disabled).length;
-      const cur = this.selectedBox.length;
+      const cur = this.selectedList.length;
       return min < cur && cur < max;
     },
     isIndeterminateBias() {
       const max = CHECKBOX_BIAS.length;
       const min = CHECKBOX_BIAS.filter((i) => i.disabled).length;
-      const cur = this.selectedBoxBias.length;
+      const cur = this.selectedListBias.length;
       return min < cur && cur < max;
     },
   },
@@ -167,14 +163,44 @@ export default {
       isLoading: false,
       isLoadingBias: false,
 
-      checkboxList: [],
-      selectedBox: [],
+      checkboxList: CHECKBOX_STRAIGHT,
+      selectedList: CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value),
       combineData: {},
 
-      checkboxList2: [],
-      selectedBoxBias: [],
+      checkboxList2: CHECKBOX_BIAS,
+      selectedListBias: CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value),
       combineDataBias: {},
     };
+  },
+  created() {
+    // 用于控制 selectedBox 相关请求
+    this.debouncedFetchStraight = debounce(function () {
+      console.log('selectedList -> fetchStraight')
+      this.fetchDataStraight();
+    }, 700);
+
+    this.debouncedFetchBias = debounce(function () {
+      this.fetchDataBias();
+    }, 700);
+  },
+  activated() {
+    this.isActivated = true;
+    if (!this.sharedRound) return;
+
+    if (this.inputRound !== this.sharedRound) {
+      // 拦截由于 selectedList 变更导致的请求
+      if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
+      if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
+
+      console.log('activated -> fetchBoth')
+      this.fetchBoth()
+      this.inputRound = this.sharedRound;
+    }
+  },
+  deactivated() {
+    if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
+    if (this.debouncedFetchBias) this.debouncedFetchBias.cancel();
+    this.isActivated = false;
   },
 
   methods: {
@@ -184,16 +210,16 @@ export default {
 
     handleCheckAll(bool) {
       if (bool) {
-        this.selectedBox = CHECKBOX_STRAIGHT.map((item) => item.value);
+        this.selectedList = CHECKBOX_STRAIGHT.map((item) => item.value);
       } else {
-        this.selectedBox = CHECKBOX_STRAIGHT.filter((item) => item.disabled).map((item) => item.value);
+        this.selectedList = CHECKBOX_STRAIGHT.filter((item) => item.disabled).map((item) => item.value);
       }
     },
     handleCheckAllBias(bool) {
       if (bool) {
-        this.selectedBoxBias = CHECKBOX_BIAS.map((item) => item.value);
+        this.selectedListBias = CHECKBOX_BIAS.map((item) => item.value);
       } else {
-        this.selectedBoxBias = CHECKBOX_BIAS.filter((item) => item.disabled).map((item) => item.value);
+        this.selectedListBias = CHECKBOX_BIAS.filter((item) => item.disabled).map((item) => item.value);
       }
     },
     
@@ -245,10 +271,10 @@ export default {
     },
     // 3. 对外暴露的简洁方法
     async fetchDataStraight() {
-      this.fetchData(this.selectedBox, this.sharedRound, "combineData", "isLoading");
+      this.fetchData(this.selectedList, this.sharedRound, "combineData", "isLoading");
     },
     async fetchDataBias() {
-      this.fetchData(this.selectedBoxBias,this.sharedRound,"combineDataBias","isLoadingBias");
+      this.fetchData(this.selectedListBias,this.sharedRound,"combineDataBias","isLoadingBias");
     },
     async fetchBoth() {
       await Promise.all([this.fetchDataStraight(), this.fetchDataBias()]);
@@ -266,12 +292,7 @@ export default {
         return [];
       }
     },
-    initCheckbox() {
-      this.checkboxList = CHECKBOX_STRAIGHT
-      this.checkboxList2 = CHECKBOX_BIAS
-      this.selectedBox = CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value);
-      this.selectedBoxBias = CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value);
-    },
+  
   },
 };
 </script>

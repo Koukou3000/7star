@@ -5,7 +5,7 @@
 - [x] 组件keep-alive，watch在后台监听到变化 【添加isActivated变量用于控制】
 - [x] 统一管理各页面的tableName 【引用单一数据源@/constants】 
 - [x] 重新设计请求中切换期号的场景（取消防抖拦截请求；比对期号解决数据异步竞态问题）
-- [ ] CombinePredict请求冗余（14个请求，实际上只需要8次）
+- [ ] CombinePredict请求冗余（初始化请求了两遍；每遍14个请求，实际上只需要8次）
 - [ ] 给每个页面的请求设计失败场景（PredictCard :data==[]）
 - [ ] 调整 elementUI 为按需引入
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
