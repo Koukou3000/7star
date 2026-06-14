@@ -30,6 +30,7 @@ export default {
   components: {
     RoundEdit,
     PredictCard,
+    
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
