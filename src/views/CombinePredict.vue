@@ -85,6 +85,34 @@ const CHECKBOX_BIAS = [
   { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
 ];
 
+// 用于localstorage
+const STORAGE_KEY_STRAIGHT = 'COMBINE_SELECTED_STRAIGHT';
+const STORAGE_KEY_BIAS = 'COMBINE_SELECTED_BIAS';
+const LEGAL_TABLE_NAMES = Object.values(TABLE_NAMES)
+
+function getLocalStorageData(key, defaultValue) {
+  try {
+    const str = localStorage.getItem(key)
+    if (!str) return null // 没有缓存记录直接退出，不触发异常流程
+
+    const arr = JSON.parse(str)
+    if (!Array.isArray(arr)) return null; //  防止本地被改成了非数组格式（如字符串或数字）
+
+    let ans = arr.filter(item => LEGAL_TABLE_NAMES.includes(item)) // filter()留下返回true的元素
+
+    // 如果必选项不在里面，强行塞入
+    if (!ans.includes(defaultValue)) {
+      ans.unshift(defaultValue)
+    }
+
+    return ans
+  } catch (error) {
+    // 如果用户手动魔改了本地数据导致 JSON.parse 报错，这里捕获并降级，防止整个页面死锁崩溃
+    console.log(`读取本地缓存 [${key}] 失败，已自动降级使用默认配置`, error);
+    return null;
+  }
+}
+
 export default {
   components: {
     RoundEdit,
@@ -123,6 +151,9 @@ export default {
     },
   },
   data() {
+    const localStraight = getLocalStorageData(STORAGE_KEY_STRAIGHT, TABLE_NAMES.PAIR_STRAIGHT)
+    const localBias = getLocalStorageData(STORAGE_KEY_BIAS, TABLE_NAMES.PAIR_BIAS)
+
     return {
       inputRound: "",
       isActivated: false,
@@ -131,11 +162,11 @@ export default {
       isLoadingBias: false,
 
       checkboxList: Object.freeze(CHECKBOX_STRAIGHT),
-      selectedList: CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value),
+      selectedList: localStraight || CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value),
       combineData: {},
 
       checkboxList2: Object.freeze(CHECKBOX_BIAS),
-      selectedListBias: CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value),
+      selectedListBias: localBias || CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value),
       combineDataBias: {},
     };
   },
@@ -155,13 +186,15 @@ export default {
       immediate: true,
     },
     selectedList: {
-      handler() {
+      handler(newVal) {
+        localStorage.setItem(STORAGE_KEY_STRAIGHT, JSON.stringify(newVal))
         this.debouncedFetchStraight()
       },
       deep: true,
     },
     selectedListBias: {
-      handler() {
+      handler(newVal) {
+        localStorage.setItem(STORAGE_KEY_BIAS, JSON.stringify(newVal))
         this.debouncedFetchBias()
       },
       deep: true
@@ -293,7 +326,6 @@ export default {
         return [];
       }
     },
-  
   },
 };
 </script>

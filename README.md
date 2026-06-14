@@ -6,13 +6,13 @@
 - [x] 重新设计请求中切换期号的场景（取消防抖拦截请求；比对期号解决数据竞态）
 - [x] CombinePredict初始化时请求了两遍【在data初始化静态数据，避免触发watch】
 - [x] CombinePredict页面中复用请求
+- [x] 将CombinePredict的勾选记录存储在本地（localstorage）
 
 - 给每个页面的请求设计场景
   - [ ] 空场景 （PredictCard :data==[]）
   - [ ] 错误场景 （带重试按钮）
   - [x] 路由切换导致latestRound没有返回数据【activated()再请求一次】
   
-- [ ] 将CombinePredict的勾选记录存储在本地（localstorage）
 - [ ] 调整 elementUI 为按需引入
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
 
