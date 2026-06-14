@@ -55,9 +55,13 @@ export default {
 
   activated() {
     this.isActivated = true;
-    if (!this.sharedRound) return;
-    this.inputRound = this.sharedRound;
-    this.fetchAllData();
+    if (!!this.sharedRound) {
+      this.inputRound = this.sharedRound;
+      this.fetchAllData();
+    }
+    else {
+      this.$store.dispatch('getLatestRound')
+    }
   },
   deactivated() {
     this.isActivated = false;

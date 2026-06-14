@@ -184,10 +184,13 @@ export default {
 
   activated() {
     this.isActivated = true;
-    if (!this.sharedRound) return; // shareRound 非空时才请求
-    this.inputRound = this.sharedRound; // 应在fetchData前运行，否则 PredictCard 显示受影响【？】
-    this.cancelAllPendingDebounce() // 拦截请求
-    this.fetchBoth() // 重发请求
+    if (!!this.sharedRound) {
+      this.inputRound = this.sharedRound; // 应在fetchData前运行，否则 PredictCard 显示受影响【？】
+      this.cancelAllPendingDebounce() // 拦截请求
+      this.fetchBoth() // 重发请求
+    } else {
+      this.$store.dispatch('getLatestRound')
+    }
   },
   deactivated() {
     this.cancelAllPendingDebounce()
