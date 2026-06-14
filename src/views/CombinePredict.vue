@@ -150,6 +150,7 @@ export default {
       return min < cur && cur < max;
     },
   },
+
   data() {
     const localStraight = getLocalStorageData(STORAGE_KEY_STRAIGHT, TABLE_NAMES.PAIR_STRAIGHT)
     const localBias = getLocalStorageData(STORAGE_KEY_BIAS, TABLE_NAMES.PAIR_BIAS)
@@ -325,6 +326,30 @@ export default {
         console.warn("JSON解析失败，返回空数组:", arr, e);
         return [];
       }
+    },
+    initCheckbox() {
+      this.checkboxList = [
+        { label: "直线配对", value: TABLE_NAMES.PAIR_STRAIGHT, checked: true, disabled: true },
+        { label: "直线对称", value: TABLE_NAMES.SYM_STRAIGHT, checked: true },
+        { label: "直线重复", value: TABLE_NAMES.REPEAT_STRAIGHT, checked: true },
+        { label: "直线顺序", value: TABLE_NAMES.SEQ_STRAIGHT, checked: true },
+        { label: "斜线对称", value: TABLE_NAMES.SYM_BIAS, checked: true },
+        { label: "斜线重复", value: TABLE_NAMES.REPEAT_BIAS, checked: true },
+        { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
+      ];
+      this.checkboxList2 = [
+        { label: "斜线配对", value: TABLE_NAMES.PAIR_BIAS, checked: true, disabled: true },
+        { label: "直线对称", value: TABLE_NAMES.SYM_STRAIGHT, checked: true },
+        { label: "直线重复", value: TABLE_NAMES.REPEAT_STRAIGHT, checked: true },
+        { label: "直线顺序", value: TABLE_NAMES.SEQ_STRAIGHT, checked: true },
+        { label: "斜线对称", value: TABLE_NAMES.SYM_BIAS, checked: true },
+        { label: "斜线重复", value: TABLE_NAMES.REPEAT_BIAS, checked: true },
+        { label: "斜线顺序", value: TABLE_NAMES.SEQ_BIAS, checked: true },
+      ];
+      this.selectedBox = this.checkboxList.filter((i) => i.checked).map((i) => i.value);
+      this.selectedBoxBias = this.checkboxList2
+        .filter((i) => i.checked)
+        .map((i) => i.value);
     },
   },
 };
