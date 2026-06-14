@@ -130,11 +130,11 @@ export default {
       isLoading: false,
       isLoadingBias: false,
 
-      checkboxList: CHECKBOX_STRAIGHT,
+      checkboxList: Object.freeze(CHECKBOX_STRAIGHT),
       selectedList: CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value),
       combineData: {},
 
-      checkboxList2: CHECKBOX_BIAS,
+      checkboxList2: Object.freeze(CHECKBOX_BIAS),
       selectedListBias: CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value),
       combineDataBias: {},
     };
