@@ -11,8 +11,8 @@ import {
   Checkbox,
   CheckboxButton,
   CheckboxGroup} from 'element-ui'
-  
 
+// Vue.use(ElementUI);
 Vue.use(Tabs);
 Vue.use(TabPane);
 Vue.use(Row);
@@ -23,7 +23,6 @@ Vue.use(Loading);
 Vue.use(Checkbox);
 Vue.use(CheckboxButton);
 Vue.use(CheckboxGroup);
-
 
 
 Vue.config.productionTip = false
