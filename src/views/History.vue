@@ -18,17 +18,15 @@
           </el-button>
         </template>
       </el-result>
-    </div>   
-    
+    </div>
+
     <div v-else>
       <el-button :loading="isLoading" @click="loadMore">
         <span>插入 {{ pageSize }} 期</span>
       </el-button>
 
       <div v-loading="isLoading">
-
-        <!-- 获取的数据为空 -->
-        <el-empty v-if="!isLoading && rows.length === 0"></el-empty>
+        <el-empty v-if="rows.length === 0"></el-empty>
 
         <div v-else class="scroll-wrap">
           <div v-for="(item, index) in rows" :key="item.round" class="line-container">
@@ -45,10 +43,7 @@
           </div>
         </div>
       </div>
-
     </div>
-
-
   </div>
 </template>
 
@@ -63,7 +58,7 @@ export default {
       pageSize: 15,
       isLoading: false,
       isError: false,
-      errorMessage: '',
+      errorMessage: "",
 
       rows: [],
     };
@@ -81,32 +76,40 @@ export default {
       if (this.isLoading) return;
       this.isLoading = true;
       this.isError = false;
-      
+
       try {
         const resp = await api.getResults(this.page * this.pageSize, this.pageSize);
 
         // 判断数据是否符合要求 isError
         if (!resp || !Array.isArray(resp.data)) {
-          throw new Error("返回数据格式不正确"); 
+          throw new Error("返回数据格式不正确，请重试");
         }
+        
         // 符合类型要求才拼接数据
-        const newlines = resp.data || [];
         // const newlines = 1  // 模拟类型错误
         // const newlines = [] // 模拟获取空数据
+        const newlines = resp.data || [];
+        this.concatRows(newlines);
 
-        this.concatRows(newlines)
-      
+        
       } catch (e) {
         if (e && e.message === "canceled") return; // axios.isCancel(e)
-        this.handleError(e)
+        this.handleError(e);
       } finally {
         this.isLoading = false;
       }
     },
     handleError(e) {
-      this.isError = true
-      this.errorMessage = e.message
-      console.error(e)
+      // 如果已经渲染过数据，出现错误只弹窗提示
+      if (this.rows.length > 0) {
+        this.$message.error(e.message || "加载数据失败，请重试") 
+      }
+      else {
+        this.isError = true;
+        this.errorMessage = e.message;
+        console.error(e);
+      }
+      
     },
     concatRows(newlines) {
       const allRows = [...newlines, ...this.rows];
@@ -115,9 +118,9 @@ export default {
 
       // 新数据长度和页码相同，说明还有更多数据可以获取
       if (newlines.length === this.pageSize) {
-        this.page += 1
+        this.page += 1;
       }
-    }
+    },
   },
 };
 </script>

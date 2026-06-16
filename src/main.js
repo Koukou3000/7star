@@ -6,8 +6,16 @@ import router from './router'
 // import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import {
-  Tabs, TabPane,
-  Row, Col, Input, Button, Loading,
+  Tabs,
+  TabPane,
+  Row,
+  Col,
+  Input,
+  Button,
+  Loading,
+  Empty,
+  Result,
+  Message,
   Checkbox,
   CheckboxButton,
   CheckboxGroup} from 'element-ui'
@@ -23,6 +31,9 @@ Vue.use(Loading);
 Vue.use(Checkbox);
 Vue.use(CheckboxButton);
 Vue.use(CheckboxGroup);
+Vue.use(Empty)
+Vue.use(Result)
+Vue.prototype.$message = Message
 
 
 Vue.config.productionTip = false
