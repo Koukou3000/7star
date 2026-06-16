@@ -84,14 +84,16 @@ export default {
         if (!resp || !Array.isArray(resp.data)) {
           throw new Error("返回数据格式不正确，请重试");
         }
+        if (this.page !== 0 && resp.data.length === 0) {
+          this.$message.info('本次返回数据为空，请重试')
+        }
         
         // 符合类型要求才拼接数据
         // const newlines = 1  // 模拟类型错误
         // const newlines = [] // 模拟获取空数据
         const newlines = resp.data || [];
         this.concatRows(newlines);
-
-        
+      
       } catch (e) {
         if (e && e.message === "canceled") return; // axios.isCancel(e)
         this.handleError(e);
