@@ -9,32 +9,46 @@
       <el-col :span="4" align="center">个</el-col>
     </el-row>
 
-    <el-button plain round :loading="isLoading" @click="loadMore" :disabled="isLastPage">
-      <span>插入 {{ pageSize }} 期</span>
-    </el-button>
+    <!-- 获取数据时出现错误 -->
+    <div v-if="isError">
+      <el-result icon="error" :subTitle="errorMessage">
+        <template slot="extra">
+          <el-button :loading="isLoading" @click="loadMore">
+            <span>重试</span>
+          </el-button>
+        </template>
+      </el-result>
+    </div>   
+    
+    <div v-else>
+      <el-button :loading="isLoading" @click="loadMore">
+        <span>插入 {{ pageSize }} 期</span>
+      </el-button>
 
-    <div v-loading="isLoading">
-      <el-empty v-if="!isLoading && rows.length === 0">
-        <el-button @click="retry">
-          <span>重试</span>
-        </el-button>
-      </el-empty>
+      <div v-loading="isLoading">
 
-      <div v-else class="scroll-wrap">
-        <div v-for="(item, index) in rows" :key="item.round" class="line-container">
-          <div :class="getRowClass(index)">
-            <el-row>
-              <el-col :span="4" class="numbers">{{ item.round }}</el-col>
-              <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
-              <el-col :span="4" align="center">{{ item.thousand }}</el-col>
-              <el-col :span="4" align="center">{{ item.hundred }}</el-col>
-              <el-col :span="4" align="center">{{ item.ten }}</el-col>
-              <el-col :span="4" align="center">{{ item.one }}</el-col>
-            </el-row>
+        <!-- 获取的数据为空 -->
+        <el-empty v-if="!isLoading && rows.length === 0"></el-empty>
+
+        <div v-else class="scroll-wrap">
+          <div v-for="(item, index) in rows" :key="item.round" class="line-container">
+            <div :class="getRowClass(index)">
+              <el-row>
+                <el-col :span="4" class="numbers">{{ item.round }}</el-col>
+                <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
+                <el-col :span="4" align="center">{{ item.thousand }}</el-col>
+                <el-col :span="4" align="center">{{ item.hundred }}</el-col>
+                <el-col :span="4" align="center">{{ item.ten }}</el-col>
+                <el-col :span="4" align="center">{{ item.one }}</el-col>
+              </el-row>
+            </div>
           </div>
         </div>
       </div>
+
     </div>
+
+
   </div>
 </template>
 
@@ -48,7 +62,8 @@ export default {
       page: 0,
       pageSize: 15,
       isLoading: false,
-      isLastPage: false,
+      isError: false,
+      errorMessage: '',
 
       rows: [],
     };
@@ -63,38 +78,46 @@ export default {
   },
   methods: {
     async loadMore() {
-      if (this.isLoading || this.isLastPage) return;
+      if (this.isLoading) return;
       this.isLoading = true;
-
+      this.isError = false;
+      
       try {
-        const resp = await api.getrows(this.page * this.pageSize, this.pageSize);
-        const newlines = resp.data || [];
+        const resp = await api.getResults(this.page * this.pageSize, this.pageSize);
 
-        const allRows = [...newlines, ...this.rows];
-        const uniqueMap = new Map(allRows.map((item) => [item.round, item]));
-        this.rows = [...uniqueMap.values()].sort((a, b) => a.round - b.round);
-
-        // 后端返回了0条，或不满一页的数据
-        if (newlines.length < this.pageSize) {
-          this.isLastPage = true;
-        } else {
-          this.page += 1; // 获取到了一页数据，页码+1
-          this.isLastPage = false;
+        // 判断数据是否符合要求 isError
+        if (!resp || !Array.isArray(resp.data)) {
+          throw new Error("返回数据格式不正确"); 
         }
+        // 符合类型要求才拼接数据
+        const newlines = resp.data || [];
+        // const newlines = 1  // 模拟类型错误
+        // const newlines = [] // 模拟获取空数据
+
+        this.concatRows(newlines)
+      
       } catch (e) {
         if (e && e.message === "canceled") return; // axios.isCancel(e)
-        console.log(e.message);
+        this.handleError(e)
       } finally {
         this.isLoading = false;
       }
     },
-    retry() {
-      this.page = 0;
-      this.isLastPage = false
-      this.rows = []
-      this.loadMore();
-      return;
+    handleError(e) {
+      this.isError = true
+      this.errorMessage = e.message
+      console.error(e)
     },
+    concatRows(newlines) {
+      const allRows = [...newlines, ...this.rows];
+      const uniqueMap = new Map(allRows.map((item) => [item.round, item]));
+      this.rows = [...uniqueMap.values()].sort((a, b) => a.round - b.round);
+
+      // 新数据长度和页码相同，说明还有更多数据可以获取
+      if (newlines.length === this.pageSize) {
+        this.page += 1
+      }
+    }
   },
 };
 </script>
