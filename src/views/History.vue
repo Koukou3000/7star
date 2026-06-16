@@ -1,14 +1,5 @@
 <template>
   <div>
-    <el-button
-      plain
-      round
-      :loading="isLoading"
-      @click="getMoreResult()"
-      :disabled="!hasMore"
-      >插入前 15 期
-    </el-button>
-
     <el-row>
       <el-col :span="4" class="numbers">期数</el-col>
       <el-col :span="4" align="center">万</el-col>
@@ -18,21 +9,38 @@
       <el-col :span="4" align="center">个</el-col>
     </el-row>
 
-    <div class="scroll-wrap" v-loading="isLoading">
-      <div v-for="(item, index) in results" :key="item.round" class="line-container">
-        <div :class="[zebraCSS(index)]">
-          <el-row>
-            <el-col :span="4" class="numbers">{{ item.round }}</el-col>
-            <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
-            <el-col :span="4" align="center">{{ item.thousand }}</el-col>
-            <el-col :span="4" align="center">{{ item.hundred }}</el-col>
-            <el-col :span="4" align="center">{{ item.ten }}</el-col>
-            <el-col :span="4" align="center">{{ item.one }}</el-col>
-          </el-row>
+    <el-button
+      plain
+      round
+      :loading="isLoading"
+      @click="getMoreResult()"
+      :disabled="!hasMore"
+    >
+      <!-- 请求返回空数据，触发重试 -->
+      <span v-if="!this.isLoading && this.results.length == 0">重试</span>
+      <span v-else>插入 {{ pageSize }} 期</span>
+    </el-button>
+
+    <div v-loading="isLoading">
+    
+      <el-empty v-if="!this.isLoading && this.results.length == 0"></el-empty>
+
+      <div v-else class="scroll-wrap">
+        <div v-for="(item, index) in results" :key="item.round" class="line-container">
+
+          <div :class='index % 2 === 0 ? "zebra" : ""'>
+            <el-row>
+              <el-col :span="4" class="numbers">{{ item.round }}</el-col>
+              <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
+              <el-col :span="4" align="center">{{ item.thousand }}</el-col>
+              <el-col :span="4" align="center">{{ item.hundred }}</el-col>
+              <el-col :span="4" align="center">{{ item.ten }}</el-col>
+              <el-col :span="4" align="center">{{ item.one }}</el-col>
+            </el-row>
+          </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -46,20 +54,10 @@ export default {
       page: 0,
       pageSize: 15,
       isLoading: false,
+      hasMore: true,
 
       results: [],
-      hasMore: true,
     };
-  },
-  computed: {
-    zebraCSS() {
-      return (index) => {
-        return index % 2 === 0 ? "zebra" : "";
-      };
-    },
-    start() {
-      return this.page * this.pageSize;
-    },
   },
   activated() {
     this.getResult();
@@ -70,30 +68,39 @@ export default {
       this.isLoading = true;
 
       try {
-        const resp = await api.getResults(this.start, this.pageSize);
+        const resp = await api.getResults(this.page * this.pageSize, this.pageSize);
         const newlines = resp.data;
         const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
 
         const uniqueMap = new Map();
-        sortedLines.forEach(item => uniqueMap.set(item.round, item)); // 1. uniqueMap先塞新数据
-        this.results.forEach(item => uniqueMap.set(item.round, item)) // 2. 后塞老数据
-        this.results = [...uniqueMap.values()]
+        sortedLines.forEach((item) => uniqueMap.set(item.round, item)); // 1. uniqueMap先塞新数据
+        this.results.forEach((item) => uniqueMap.set(item.round, item)); // 2. 后塞老数据
+        this.results = [...uniqueMap.values()];
 
-        // 分页判断
+        // 模拟返回空数据
+        // this.results.splice(0)
+
+        // 最后一页？
         if (newlines.length < this.pageSize) {
           this.hasMore = false;
         }
       } catch (e) {
-        if (e && e.message === "canceled") return; // axios.isCancel(e) 
+        if (e && e.message === "canceled") return; // axios.isCancel(e)
+        // 添加可能的错误场景？
         console.log(e);
       } finally {
         this.isLoading = false;
       }
     },
     getMoreResult() {
-      this.page += 1;
+      if (this.results.length == 0) {
+        this.page = 0;
+      } else {
+        this.page += 1;
+      }
       this.getResult();
     },
+   
   },
 };
 </script>
