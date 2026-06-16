@@ -9,26 +9,21 @@
       <el-col :span="4" align="center">个</el-col>
     </el-row>
 
-    <el-button
-      plain
-      round
-      :loading="isLoading"
-      @click="getMoreResult()"
-      :disabled="!hasMore"
-    >
-      <!-- 请求返回空数据，触发重试 -->
-      <span v-if="!this.isLoading && this.results.length == 0">重试</span>
-      <span v-else>插入 {{ pageSize }} 期</span>
+    <el-button plain round :loading="isLoading" @click="getResult" :disabled="isLastPage">
+      <span>插入 {{ pageSize }} 期</span>
     </el-button>
 
     <div v-loading="isLoading">
     
-      <el-empty v-if="!this.isLoading && this.results.length == 0"></el-empty>
+      <el-empty v-if="!isLoading && this.results.length == 0">
+        <el-button @click="retryFetch">
+          <span>重试</span>
+        </el-button>
+      </el-empty>
 
       <div v-else class="scroll-wrap">
         <div v-for="(item, index) in results" :key="item.round" class="line-container">
-
-          <div :class='index % 2 === 0 ? "zebra" : ""'>
+          <div :class="index % 2 === 0 ? 'zebra' : ''">
             <el-row>
               <el-col :span="4" class="numbers">{{ item.round }}</el-col>
               <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
@@ -54,53 +49,55 @@ export default {
       page: 0,
       pageSize: 15,
       isLoading: false,
-      hasMore: true,
+      isLastPage: false,
 
       results: [],
     };
   },
-  activated() {
+  created() {
     this.getResult();
   },
   methods: {
     async getResult() {
-      if (this.isLoading || !this.hasMore) return;
+      if (this.isLoading || this.isLastPage) return;
       this.isLoading = true;
 
       try {
         const resp = await api.getResults(this.page * this.pageSize, this.pageSize);
-        const newlines = resp.data;
+        const newlines = resp.data || [];
         const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
 
-        const uniqueMap = new Map();
-        sortedLines.forEach((item) => uniqueMap.set(item.round, item)); // 1. uniqueMap先塞新数据
-        this.results.forEach((item) => uniqueMap.set(item.round, item)); // 2. 后塞老数据
-        this.results = [...uniqueMap.values()];
+        if (this.page === 0) {
+          this.results = sortedLines
+        }
+        else {
+          const uniqueMap = new Map();
+          sortedLines.forEach((item) => uniqueMap.set(item.round, item)); // 1. 新数据在顶部
+          this.results.forEach((item) => uniqueMap.set(item.round, item)); // 2. 老数据接在后面
+          this.results = [...uniqueMap.values()];
+        }
 
-        // 模拟返回空数据
-        // this.results.splice(0)
-
-        // 最后一页？
+        // 后端返回了0条，或不满一页的数据
         if (newlines.length < this.pageSize) {
-          this.hasMore = false;
+          this.isLastPage = true;
+        } else {
+          this.page += 1; // 获取到了一页数据，页码+1
+          this.isLastPage = false
         }
       } catch (e) {
         if (e && e.message === "canceled") return; // axios.isCancel(e)
-        // 添加可能的错误场景？
-        console.log(e);
+        console.log(e.message);
       } finally {
         this.isLoading = false;
       }
     },
-    getMoreResult() {
+    retryFetch() {
       if (this.results.length == 0) {
         this.page = 0;
-      } else {
-        this.page += 1;
+        this.getResult();
+        return;
       }
-      this.getResult();
     },
-   
   },
 };
 </script>
