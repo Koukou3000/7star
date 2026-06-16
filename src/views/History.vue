@@ -15,7 +15,7 @@
 
     <div v-loading="isLoading">
     
-      <el-empty v-if="!isLoading && this.results.length == 0">
+      <el-empty v-if="!isLoading && this.results.length === 0">
         <el-button @click="retryFetch">
           <span>重试</span>
         </el-button>
@@ -65,18 +65,11 @@ export default {
       try {
         const resp = await api.getResults(this.page * this.pageSize, this.pageSize);
         const newlines = resp.data || [];
-        const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
-
-        if (this.page === 0) {
-          this.results = sortedLines
-        }
-        else {
-          const uniqueMap = new Map();
-          sortedLines.forEach((item) => uniqueMap.set(item.round, item)); // 1. 新数据在顶部
-          this.results.forEach((item) => uniqueMap.set(item.round, item)); // 2. 老数据接在后面
-          this.results = [...uniqueMap.values()];
-        }
-
+       
+        const allItems = [...newlines, ...this.results]
+        const uniqueMap = new Map(allItems.map(item => [item.round, item]));
+        this.results = [...uniqueMap.values()].sort((a, b) => a.round - b.round);
+          
         // 后端返回了0条，或不满一页的数据
         if (newlines.length < this.pageSize) {
           this.isLastPage = true;
@@ -92,7 +85,7 @@ export default {
       }
     },
     retryFetch() {
-      if (this.results.length == 0) {
+      if (this.results.length === 0) {
         this.page = 0;
         this.getResult();
         return;
