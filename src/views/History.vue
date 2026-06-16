@@ -84,7 +84,7 @@ export default {
         if (!resp || !Array.isArray(resp.data)) {
           throw new Error("返回数据格式不正确，请重试");
         }
-        if (this.page !== 0 && resp.data.length === 0) {
+        if (this.rows.length > 0 !== 0 && resp.data.length === 0) {
           this.$message.info('本次返回数据为空，请重试')
         }
         
