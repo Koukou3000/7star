@@ -30,7 +30,7 @@
 
         <div v-else class="scroll-wrap">
           <div v-for="(item, index) in rows" :key="item.round" class="line-container">
-            <div :class="getRowClass(index)">
+            <div :class='index % 2 === 0 ? "zebra" : ""'>
               <el-row>
                 <el-col :span="4" class="numbers">{{ item.round }}</el-col>
                 <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
@@ -49,6 +49,7 @@
 
 <script>
 import { api } from "../api";
+import axios from "axios";
 
 export default {
   name: "History",
@@ -66,11 +67,6 @@ export default {
   created() {
     this.loadMore();
   },
-  computed: {
-    getRowClass() {
-      return (index) => (index % 2 === 0 ? "zebra" : "");
-    },
-  },
   methods: {
     async loadMore() {
       if (this.isLoading) return;
@@ -84,7 +80,7 @@ export default {
         if (!resp || !Array.isArray(resp.data)) {
           throw new Error("返回数据格式不正确，请重试");
         }
-        if (this.rows.length > 0 !== 0 && resp.data.length === 0) {
+        if (this.rows.length > 0  && resp.data.length === 0) {
           this.$message.info('本次返回数据为空，请重试')
         }
         
@@ -95,8 +91,9 @@ export default {
         this.concatRows(newlines);
       
       } catch (e) {
-        if (e && e.message === "canceled") return; // axios.isCancel(e)
+        if(axios.isCancel(e)) return
         this.handleError(e);
+
       } finally {
         this.isLoading = false;
       }
