@@ -9,7 +9,11 @@
       <el-col :span="4" align="center">个</el-col>
     </el-row>
 
-    <!-- 获取数据时出现错误 -->
+    <!-- 
+    -错误
+    -正常 
+      -空
+      -非空 -->
     <div v-if="isError">
       <el-result icon="error" :subTitle="errorMessage">
         <template slot="extra">
@@ -20,15 +24,17 @@
       </el-result>
     </div>
 
+
     <div v-else>
       <el-button :loading="isLoading" @click="loadMore">
         <span>插入 {{ pageSize }} 期</span>
       </el-button>
 
       <div v-loading="isLoading">
+        
         <el-empty v-if="rows.length === 0"></el-empty>
-
         <div v-else class="scroll-wrap">
+
           <div v-for="(item, index) in rows" :key="item.round" class="line-container">
             <div :class='index % 2 === 0 ? "zebra" : ""'>
               <el-row>
@@ -135,9 +141,6 @@ export default {
 }
 .zebra {
   background-color: #f7f7f7;
-}
-.el-col {
-  line-height: 60px;
 }
 .numbers {
   font-size: 20px;

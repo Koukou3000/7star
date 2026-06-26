@@ -12,6 +12,7 @@ const service = axios.create({
   timeout: 10000,
   adapter: (config) => {
 
+    // 复用状态为pending的promise
     const key = getRequestKey(config)
     if (pendingManager.has(key)) {
       return pendingManager.get(key)

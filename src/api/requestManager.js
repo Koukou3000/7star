@@ -23,9 +23,8 @@ export function cancelAllPendingRequests(reason) {
   controllers.forEach(c => c.abort(reason));
   controllers.clear();
 
-  // 清理Promise对象，以免其他页面复用到cancel后数据为空的Promise
+  // 清理Promise对象，以免页面复用到cancel后数据为空的Promise (router.beforeEach)
   // pendingPromises.clear()
-  // 此处改为用 vuex 实现
 }
 
 export const pendingManager = {
