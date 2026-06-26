@@ -3,7 +3,7 @@
 ### fix
 - 设计空场景 & 错误场景
   - [x] History 
-  - [ ] Pair
+  - [x] Pair
   - [ ] Rept
   - [ ] Seq
   - [ ] Sym
