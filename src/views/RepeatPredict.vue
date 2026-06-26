@@ -8,10 +8,28 @@
         @change="confirmRoundChange"
       />
 
-      <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-        <PredictCard title="重复" :showRound="inputRound" :data="combineData" />
-        <hr />
+      <div v-if="isError">
+        <el-result icon="error" :subTitle="errorMessage">
+          <template slot="extra">
+            <el-button @click="fetchAllData">重试</el-button>
+          </template>
+        </el-result>
       </div>
+
+      <div v-else v-loading="isLoading">
+        <div v-if="!hasData">
+          <el-empty description="暂无该期数的预测数据">
+            <el-button @click="goToLatest">查看最新一期</el-button>
+          </el-empty>
+        </div>
+        
+        <!-- 正常展示 -->
+        <div v-else :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
+          <PredictCard title="重复" :showRound="inputRound" :data="combineData" />
+        </div>
+        
+      </div>
+
     </div>
   </div>
 </template>
@@ -21,6 +39,7 @@ import { mapState } from "vuex";
 import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
+import axios from "axios";
 
 import { TABLE_NAMES } from '@/constants'
 const { REPEAT_STRAIGHT, REPEAT_BIAS } = TABLE_NAMES
@@ -32,6 +51,36 @@ export default {
   },
   computed: {
     ...mapState(["sharedRound"]),
+    hasData() {
+      return Object.keys(this.combineData).length > 0
+    },
+    combineData() {
+      const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
+      const straight = this.straightData
+      const bias = this.biasData
+      if (!straight || !bias) {
+        return []
+      }
+      return fields.reduce(
+        (res, field) => {
+          const straightArr = JSON.parse(straight[field]);
+          const biasArr = JSON.parse(bias[field]);
+          // combineData.myriabit
+          res[field] = Array.from(new Set(straightArr.concat(biasArr))).sort(
+            (a, b) => a - b
+          );
+          
+          res[`${field}_hit`] = this.getUnion(
+            straight[`${field}_hit`],
+            bias[`${field}_hit`]
+          ); // combineData.myriabit_hit: 0/1/2
+          return res;
+        },
+        {
+          round: straight.round || bias.round,
+        }
+      );
+    }
   },
   watch: {
     sharedRound: {
@@ -64,18 +113,24 @@ export default {
   data() {
     return {
       inputRound: "",
-      isActivated: false,
-
       isEditing: false,
       isLoading: false,
-      combineData: {},
+      isActivated: false,
+
+      isError: false,
+      errorMessage: '',
+
+      straightData: {},
+      biasData: {},
     };
   },
   methods: {
     confirmRoundChange(innerRound) {
       this.$store.commit("SET_sharedRound", innerRound);
     },
-
+    goToLatest() {
+      this.$store.dispatch('getLatestRound')
+    },
     async fetchData(tableName) {
       const res = await api.getPredict(tableName, this.sharedRound);
       return res.data[0];
@@ -83,42 +138,23 @@ export default {
     async fetchAllData() {
       if (this.isLoading) return;
       this.isLoading = true;
+      this.isError = false
       try {
         const [straight, bias] = await Promise.all([
           this.fetchData(REPEAT_STRAIGHT),
           this.fetchData(REPEAT_BIAS),
         ]);
-        this.generateCombineData(straight, bias);
-        this.inputRound = straight.round || bias.round;
+
+        this.straightData = straight
+        this.biasData = bias
+
       } catch (e) {
-        if (e.message === "canceled")
-          return;
-        console.log(e);
-        // this.$store.dispatch('getLatestRound')
+        if(axios.isCancel(e)) return;
+        this.isError = true
+        this.errorMessage = e.message
       } finally {
         this.isLoading = false;
       }
-    },
-    generateCombineData(straight, bias) {
-      const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
-      this.combineData = fields.reduce(
-        (res, field) => {
-          const straightArr = JSON.parse(straight[field]);
-          const biasArr = JSON.parse(bias[field]);
-
-          res[field] = Array.from(new Set(straightArr.concat(biasArr))).sort(
-            (a, b) => a - b
-          ); // combineData.myriabit
-          res[`${field}_hit`] = this.getUnion(
-            straight[`${field}_hit`],
-            bias[`${field}_hit`]
-          ); // combineData.myriabit_hit: 0/1/2
-          return res;
-        },
-        {
-          round: straight.round || bias.round,
-        }
-      );
     },
     getUnion(hit1, hit2) {
       if (hit1 == 1 || hit2 == 1) {

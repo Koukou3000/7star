@@ -4,7 +4,7 @@
 - 设计空场景 & 错误场景
   - [x] History 
   - [x] Pair
-  - [ ] Rept
+  - [x] Rept
   - [ ] Seq
   - [ ] Sym
   - [ ] Combine

@@ -112,8 +112,9 @@ export default {
       return res.data[0];
     },
     async fetchAllData() {
-      this.isError = false
+      if (this.isLoading) return;
       this.isLoading = true;
+      this.isError = false
       try {
         const [straight, bias] = await Promise.all([
           this.fetchData(PAIR_STRAIGHT),
