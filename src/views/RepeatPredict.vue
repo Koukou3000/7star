@@ -1,5 +1,4 @@
 <template>
-  <div>
     <div class="result">
       <RoundEdit
         v-model="inputRound"
@@ -31,7 +30,6 @@
       </div>
 
     </div>
-  </div>
 </template>
 
 <script>
@@ -52,7 +50,7 @@ export default {
   computed: {
     ...mapState(["sharedRound"]),
     hasData() {
-      return Object.keys(this.combineData).length > 0
+      return Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
     },
     combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
@@ -145,8 +143,8 @@ export default {
           this.fetchData(REPEAT_BIAS),
         ]);
 
-        this.straightData = straight
-        this.biasData = bias
+        this.straightData = straight || {};
+        this.biasData = bias || {};
 
       } catch (e) {
         if(axios.isCancel(e)) return;

@@ -5,8 +5,8 @@
   - [x] History 
   - [x] Pair
   - [x] Rept
-  - [ ] Seq
-  - [ ] Sym
+  - [x] Seq
+  - [x] Sym
   - [ ] Combine
 
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序

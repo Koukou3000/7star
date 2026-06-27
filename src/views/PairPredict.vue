@@ -22,16 +22,18 @@
             <el-button @click="goToLatest">查看最新一期</el-button>
           </el-empty>
         </div>
-        
+
         <!-- 正常展示 -->
-        <div v-else :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
+        <div
+          v-else
+          :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }"
+          v-loading="isLoading"
+        >
           <PredictCard title="直线配对" :showRound="inputRound" :data="straightData" />
           <hr />
           <PredictCard title="斜线配对" :showRound="inputRound" :data="biasData" />
         </div>
-        
       </div>
-      
     </div>
   </div>
 </template>
@@ -43,8 +45,8 @@ import axios from "axios";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
-import { TABLE_NAMES } from '@/constants'
-const { PAIR_STRAIGHT, PAIR_BIAS } = TABLE_NAMES
+import { TABLE_NAMES } from "@/constants";
+const { PAIR_STRAIGHT, PAIR_BIAS } = TABLE_NAMES;
 
 export default {
   components: {
@@ -53,9 +55,10 @@ export default {
   },
   computed: {
     ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
-    hasData() { 
-      return Object.keys(this.straightData).length > 0 &&
-        Object.keys(this.biasData).length > 0 
+    hasData() {
+      return (
+        Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
+      );
     },
   },
   watch: {
@@ -66,7 +69,7 @@ export default {
         if (!newVal) return;
         // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
         if (!this.isActivated) return;
-        
+
         this.inputRound = newVal;
         this.fetchAllData();
       },
@@ -78,9 +81,8 @@ export default {
     if (!!this.sharedRound) {
       this.inputRound = this.sharedRound;
       this.fetchAllData();
-    }
-    else {
-      this.$store.dispatch('getLatestRound')
+    } else {
+      this.$store.dispatch("getLatestRound");
     }
   },
   deactivated() {
@@ -89,13 +91,13 @@ export default {
   data() {
     return {
       inputRound: "",
-      isEditing: false, // 控制数据部分透明度，强调输入框
-      isLoading: true, // 控制界面转圈
       isActivated: false, // 避免冗余网络请求
 
+      isEditing: false, // 控制数据部分透明度，强调输入框
+      isLoading: false, // 控制界面转圈
       isError: false,
-      errorMessage: "",       // 错误信息，非空表示有错误
-      
+      errorMessage: "", // 错误信息，非空表示有错误
+
       straightData: {},
       biasData: {},
     };
@@ -105,34 +107,32 @@ export default {
       this.$store.commit("SET_sharedRound", innerRound);
     },
     goToLatest() {
-      this.$store.dispatch('getLatestRound')
+      this.$store.dispatch("getLatestRound");
     },
     async fetchData(tableName) {
-      const res = await api.getPredict( tableName, this.sharedRound );
+      const res = await api.getPredict(tableName, this.sharedRound);
       return res.data[0];
     },
     async fetchAllData() {
       if (this.isLoading) return;
       this.isLoading = true;
-      this.isError = false
+      this.isError = false;
       try {
         const [straight, bias] = await Promise.all([
           this.fetchData(PAIR_STRAIGHT),
           this.fetchData(PAIR_BIAS),
         ]);
-        
+
         this.straightData = straight || {};
         this.biasData = bias || {};
-        
       } catch (e) {
         if (axios.isCancel(e)) return;
-        this.isError = true
-        this.errorMessage = e.message
+        this.isError = true;
+        this.errorMessage = e.message;
       } finally {
         this.isLoading = false;
       }
     },
-  
   },
 };
 </script>
