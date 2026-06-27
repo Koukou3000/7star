@@ -38,7 +38,7 @@ export default {
 	},
 	data() {
 		return {
-			innerRound: this.value, // v-model == :value="inputRound" @input="inputRound=$event"
+			innerRound: this.value, // v-model == :value="sharedRound" @input="sharedRound=$event"
 		};
 	},
 	watch: {
@@ -68,12 +68,10 @@ export default {
 			else this.handleConfirm()
 		},
 		handleConfirm() {
-			this.$emit('input', this.innerRound) // v-model == :value="inputRound" @input="inputRound=$event"
-
 			clearTimeout(this.debounceTimer)
-      this.debounceTimer = setTimeout(() => {
-        const round = Number(this.innerRound)
-        this.$emit('change', round) // 通知父组件可以请求数据了
+
+      this.debounceTimer = setTimeout(() => { 
+				this.$emit('input', Number(this.innerRound)) // v-model == :value="sharedRound" @input="sharedRound=$event"
         this.$emit('blur') // 通知父组件退出编辑状态
       }, this.debounceTime)
 		}
