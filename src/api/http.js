@@ -20,16 +20,17 @@ const service = axios.create({
     }
 
     const promise = defaultAdapter(config)
-    promise.then(res => {
+    // promise.then(res => {
+    //   pendingPromiseManager.delete(key)
+    //   return res
+    // }).catch(err => {
+    //   pendingPromiseManager.delete(key) 
+    //   return Promise.reject(err)
+    // })
+    promise.finally(() => {
       pendingPromiseManager.delete(key)
-      return res
-    }).catch(err => {
-      pendingPromiseManager.delete(key) 
-      return Promise.reject(err)
     })
-
     pendingPromiseManager.set(key, promise)
-
     return promise
   }
 });

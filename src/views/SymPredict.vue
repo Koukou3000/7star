@@ -152,7 +152,7 @@ export default {
           this.fetchData(SYM_BIAS, currentController.signal),
         ]);
 
-        // 请求响应时，如果发现请求不是最新的，丢弃数据
+        // 丢弃过期请求
         if (currentController !== this.abortController) {
           console.log("请求已过期，丢弃数据");
           return;

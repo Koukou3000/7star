@@ -2,16 +2,15 @@
 
   <div class="result">
     <RoundEdit
-      v-model="inputRound"
+      v-model="sharedRound"
       @focus="isEditing = true"
       @blur="isEditing = false"
-      @change="confirmRoundChange"
     />
 
     <div v-if="isError">
       <el-result icon="error" :subTitle="errorMessage">
         <template slot="extra">
-          <el-button @click="fetchAllData">重试</el-button>
+          <el-button @click="debounceFetchAll">重试</el-button>
         </template>
       </el-result>
     </div>
@@ -29,7 +28,7 @@
         :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }"
         v-loading="isLoading"
       >
-        <PredictCard title="顺序" :showRound="inputRound" :data="combineData" />
+        <PredictCard title="顺序" :showRound="sharedRound" :data="combineData" />
       </div>
     </div>
 
@@ -38,14 +37,14 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
 import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
 import { TABLE_NAMES } from "@/constants";
-import axios from "axios";
 const { SEQ_STRAIGHT, SEQ_BIAS } = TABLE_NAMES;
+import axios from "axios";
+import { debounce } from 'lodash'
 
 export default {
   components: {
@@ -53,7 +52,14 @@ export default {
     PredictCard,
   },
   computed: {
-		...mapState(["sharedRound"]),
+    sharedRound: {
+      get() {
+        return this.$store.state.sharedRound;
+      },
+      set(value) {
+        this.$store.commit("SET_sharedRound", value);
+      },
+    },
 		hasData() {
 			return Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
 		},
@@ -90,24 +96,21 @@ export default {
       handler(newVal) {
         if (!newVal) return;
         if (!this.isActivated) return;
-
-        const isChange = newVal !== this.inputRound;
-        const isEmpty = !this.inputRound;
-        if (isChange || isEmpty) {
-          this.inputRound = newVal;
-        }
-        this.fetchAllData();
+        this.debounceFetchAll();
       },
       immediate: true,
     },
   },
+  
+  created() {
+    this.debounceFetchAll = debounce(this.fetchAllData, 300);
+  },
   activated() {
     this.isActivated = true;
-    if (!!this.sharedRound) {
-      this.inputRound = this.sharedRound;
-      this.fetchAllData();
-    } else {
+    if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
+    } else {
+      this.debounceFetchAll();
     }
   },
   deactivated() {
@@ -115,7 +118,6 @@ export default {
   },
   data() {
     return {
-      inputRound: "",
       isActivated: false,
 
       isEditing: false,
@@ -128,9 +130,6 @@ export default {
     };
   },
   methods: {
-    confirmRoundChange(innerRound) {
-      this.$store.commit("SET_sharedRound", innerRound);
-		},
 		goToLatest() {
       this.$store.dispatch('getLatestRound')
     },
@@ -139,7 +138,6 @@ export default {
       return res.data[0];
     },
     async fetchAllData() {
-      if (this.isLoading) return;
 			this.isLoading = true;
 			this.isError = false
       try {
