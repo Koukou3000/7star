@@ -1,10 +1,9 @@
 <template>
   <div class="result">
     <RoundEdit
-      v-model="inputRound"
+      v-model="sharedRound"
       @focus="isEditing = true"
       @blur="isEditing = false"
-      @change="confirmRoundChange"
     />
 
     <div :style="{ opacity: isEditing ? 0.3 : 1 }">
@@ -26,7 +25,7 @@
             {{ item.label }}
           </el-checkbox>
         </el-checkbox-group>
-        <PredictCard title="直线" :data="combineData" :showRound="inputRound" />
+        <PredictCard title="直线" :data="combineData" :showRound="sharedRound" />
       </div>
 
       <hr />
@@ -49,7 +48,7 @@
             {{ item.label }}
           </el-checkbox>
         </el-checkbox-group>
-        <PredictCard title="斜线" :data="combineDataBias" :showRound="inputRound" />
+        <PredictCard title="斜线" :data="combineDataBias" :showRound="sharedRound" />
       </div>
 
     </div>
@@ -119,8 +118,14 @@ export default {
     PredictCard,
   },
   computed: {
-    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}  
-    
+    sharedRound: {
+      get() {
+        return this.$store.state.sharedRound;
+      },
+      set(value) {
+        this.$store.commit("SET_sharedRound", value);
+      },
+    },
     isAllChecked: {
       get() {
         return CHECKBOX_STRAIGHT.length === this.selectedList.length; 
@@ -156,7 +161,6 @@ export default {
     const localBias = getLocalStorageData(STORAGE_KEY_BIAS, TABLE_NAMES.PAIR_BIAS)
 
     return {
-      inputRound: "",
       isActivated: false,
       isEditing: false,
       isLoading: false,
@@ -173,18 +177,15 @@ export default {
   },
   watch: {
     sharedRound: {
+      immediate: true,
       handler(newVal) {
-        if (!newVal || !this.isActivated) return;
-        const isChange = newVal !== this.inputRound;
-        const isEmpty = !this.inputRound;
-        
-        if (isChange || isEmpty) {
-          this.inputRound = newVal;
-        }
+        // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
+        if (!newVal) return;
+        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
+        if (!this.isActivated) return;
         this.cancelAllPendingDebounce() // 拦截请求
         this.fetchBoth() // 重发请求
       },
-      immediate: true,
     },
     selectedList: {
       handler(newVal) {
@@ -200,11 +201,6 @@ export default {
       },
       deep: true
     },
-    inputRound: {
-      handler() {
-        this.cancelAllPendingDebounce() 
-      }
-    }
   },
   created() {
     // 多选框防抖（selectedBox）
@@ -218,12 +214,12 @@ export default {
 
   activated() {
     this.isActivated = true;
-    if (!!this.sharedRound) {
-      this.inputRound = this.sharedRound; // 应在fetchData前运行，否则 PredictCard 显示受影响【？】
+    if (!this.sharedRound) {
+      this.$store.dispatch('getLatestRound')
+    }
+    else {
       this.cancelAllPendingDebounce() // 拦截请求
       this.fetchBoth() // 重发请求
-    } else {
-      this.$store.dispatch('getLatestRound')
     }
   },
   deactivated() {
@@ -232,10 +228,6 @@ export default {
   },
 
   methods: {
-    confirmRoundChange(innerRound) {
-      this.$store.commit("SET_sharedRound", innerRound);
-    },
-
     // 拦截由于 selectedList 变更导致的请求
     cancelAllPendingDebounce() { 
       if (this.debouncedFetchStraight) this.debouncedFetchStraight.cancel();
@@ -244,8 +236,8 @@ export default {
     async fetchBoth() {
       await Promise.all([
         this.fetchDataStraight(),
-        this.fetchDataBias()]
-      );
+        this.fetchDataBias()
+      ]);
     },
     // 1. 对外暴露的简洁方法
     async fetchDataStraight() {
