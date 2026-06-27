@@ -6,7 +6,7 @@
 					v-model="innerRound"
 					@focus="handleFocus"
 				 	@blur="handleBlur"
-					@change="confirm"
+					@change="handleConfirm"
 				  prefix-icon="el-icon-date"
 					class="roundNumberInput"
 				/>
@@ -49,11 +49,13 @@ export default {
 	methods: {
 		prev() {
 			this.innerRound = Number(this.innerRound) - Number(this.prevStep)
-      this.confirm()
+			this.$emit('focus')
+      this.handleConfirm()
 		},
 		next() {
 			this.innerRound = Number(this.innerRound) + Number(this.nextStep)
-      this.confirm()
+			this.$emit('focus')
+      this.handleConfirm()
 		},
 		handleFocus() {
 			this.$emit('focus')
@@ -63,9 +65,9 @@ export default {
 				this.$emit('blur')
 				return	
 			}
-			else this.confirm()
+			else this.handleConfirm()
 		},
-		confirm() {
+		handleConfirm() {
 			this.$emit('input', this.innerRound) // v-model == :value="inputRound" @input="inputRound=$event"
 
 			clearTimeout(this.debounceTimer)

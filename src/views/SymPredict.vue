@@ -58,7 +58,7 @@ export default {
       const straight = this.straightData
       const bias = this.biasData
       if (!straight || !bias) {
-        return []
+        return {}
       }
       return fields.reduce(
         (res, field) => {
@@ -89,6 +89,11 @@ export default {
 				
         const isChange = newVal !== this.inputRound;
         const isEmpty = !this.inputRound;
+
+        console.log('fetch 1')
+        console.log(isChange,isEmpty)
+        console.log(this.inputRound,'->', newVal)
+
         if (isChange || isEmpty) {
           this.inputRound = newVal;
         }
@@ -100,8 +105,9 @@ export default {
   activated() {
     this.isActivated = true;
     if (!!this.sharedRound) {
+      // console.log('fetch 2')
       this.inputRound = this.sharedRound;
-      this.fetchAllData();
+      // this.fetchAllData();
     } else {
       this.$store.dispatch('getLatestRound')
     }
@@ -136,7 +142,8 @@ export default {
 		},
 		async fetchAllData() {
 			if (this.isLoading) return
-			this.isLoading = true
+      this.isLoading = true
+      console.log(this.sharedRound,'go fetch')
 			try {
 				const [straight, bias] = await Promise.all([
           this.fetchData(SYM_STRAIGHT),
@@ -144,6 +151,7 @@ export default {
 				])
         this.straightData = straight || {};
         this.biasData = bias || {};
+     
 			} catch (e) {
 				if (axios.isCancel(e)) return;
 				this.isError = true
@@ -152,18 +160,7 @@ export default {
 				this.isLoading = false
 			}
 		},
-		// generateCombineData(straight, bias) {
-		// 	const fields = ['myriabit', 'thousand', 'hundred', 'ten', 'one']
-		// 	this.combineData = fields.reduce((res, field) => {
-		// 		const straightArr = JSON.parse(straight[field])
-		// 		const biasArr = JSON.parse(bias[field])
-		// 		res[field] = Array.from(new Set(straightArr.concat(biasArr))).sort((a,b)=>a-b) // combineData.myriabit
-		// 		res[`${field}_hit`] = this.getUnion(straight[`${field}_hit`], bias[`${field}_hit`]) // combineData.myriabit_hit: 0/1/2
-		// 		return res
-		// 	}, {
-		// 		round: straight.round || bias.round
-		// 	})
-		// },
+
 		getUnion(hit1, hit2) {
 			if(hit1==1 || hit2==1){
 				return 1

@@ -62,7 +62,7 @@ export default {
       const straight = this.straightData
       const bias = this.biasData
       if (!straight || !bias) {
-        return []
+        return {}
       }
       return fields.reduce(
         (res, field) => {
