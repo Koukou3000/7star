@@ -1,6 +1,10 @@
 ## 功能迭代待办清单
 
 ### fix
+- 以SymPredict为例修改各个页面
+  - [ ] 抽 createLatestRequest(),删掉 AbortController
+
+- [ ] 拦截 CombinePredict 的请求而非响应
 - 设计空场景 & 错误场景
   - [x] History 
   - [x] Pair
@@ -9,7 +13,6 @@
   - [x] Sym
   - [ ] Combine
 
-- [ ] 页面中的请求状态管理抽象成一个可复用的 Request 管理器
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
 
 

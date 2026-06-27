@@ -111,9 +111,9 @@ export default {
   },
   data() {
     return {
+      isActivated: false,
       isEditing: false,
       isLoading: false,
-      isActivated: false,
 
       isError: false,
       errorMessage: '',

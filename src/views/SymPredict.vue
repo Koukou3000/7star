@@ -134,8 +134,17 @@ export default {
       const res = await api.getPredict(tableName, this.sharedRound, { signal });
       return res.data[0];
     },
+      // 开始新的请求
+      //   ↓
+      // 取消旧请求
+      //         ↓
+      // 返回 signal
+      //         ↓
+      // 请求结束
+      //         ↓
+      // 判断是不是最新请求
     async fetchAllData() {
-      // 发生新请求时，作废之前的请求
+      // 取消旧请求
       if (this.abortController) {
         this.abortController.abort();
       }
@@ -152,7 +161,7 @@ export default {
           this.fetchData(SYM_BIAS, currentController.signal),
         ]);
 
-        // 丢弃过期请求
+        // 判断是否最新请求
         if (currentController !== this.abortController) {
           console.log("请求已过期，丢弃数据");
           return;
