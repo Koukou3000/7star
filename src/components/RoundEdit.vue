@@ -68,13 +68,9 @@ export default {
 			else this.handleConfirm()
 		},
 		handleConfirm() {
-			clearTimeout(this.debounceTimer)
-
-      this.debounceTimer = setTimeout(() => { 
 				this.$emit('input', Number(this.innerRound)) // v-model == :value="sharedRound" @input="sharedRound=$event"
         this.$emit('blur') // 通知父组件退出编辑状态
-      }, this.debounceTime)
-		}
+		},
 	}
 }
 </script>

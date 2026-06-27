@@ -24,10 +24,10 @@ export function cancelAllPendingRequests(reason) {
   controllers.clear();
 
   // 清理Promise对象，以免页面复用到cancel后数据为空的Promise (router.beforeEach)
-  // pendingPromises.clear()
+  pendingPromises.clear()
 }
 
-export const pendingManager = {
+export const pendingPromiseManager = {
   get: (key) => pendingPromises.get(key),
   set: (key, promise) => pendingPromises.set(key, promise),
   has: (key) => pendingPromises.has(key),

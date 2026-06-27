@@ -9,7 +9,7 @@
     <div v-if="isError">
       <el-result icon="error" :subTitle="errorMessage">
         <template slot="extra">
-          <el-button @click="fetchAllData">重试</el-button>
+          <el-button @click="debounceFetchAll">重试</el-button>
         </template>
       </el-result>
     </div>
@@ -34,13 +34,12 @@
 </template>
 
 <script>
-// import { mapState } from 'vuex';
+import { debounce } from "lodash";
 import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
 import { TABLE_NAMES } from "@/constants";
-import axios from "axios";
 const { SYM_STRAIGHT, SYM_BIAS } = TABLE_NAMES;
 
 export default {
@@ -95,15 +94,20 @@ export default {
       handler(newVal) {
         if (!newVal) return;
         if (!this.isActivated) return;
-        this.fetchAllData();
+        this.debounceFetchAll();
       },
       immediate: true,
     },
+  },
+  created() {
+    this.debounceFetchAll = debounce(this.fetchAllData, 300);
   },
   activated() {
     this.isActivated = true;
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
+    } else {
+      this.debounceFetchAll();
     }
   },
   deactivated() {
@@ -112,12 +116,12 @@ export default {
   data() {
     return {
       isActivated: false,
-
       isEditing: false,
       isLoading: false,
       isError: false,
       errorMessage: "",
 
+      abortController: null,
       straightData: {},
       biasData: {},
     };
@@ -126,30 +130,50 @@ export default {
     goToLatest() {
       this.$store.dispatch("getLatestRound");
     },
-    async fetchData(tableName) {
-      const res = await api.getPredict(tableName, this.sharedRound);
+    async fetchData(tableName, signal) {
+      const res = await api.getPredict(tableName, this.sharedRound, { signal });
       return res.data[0];
     },
     async fetchAllData() {
-      if (this.isLoading) return;
+      // 发生新请求时，作废之前的请求
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+
+      this.abortController = new AbortController();
+      const currentController = this.abortController;
+
       this.isLoading = true;
-      console.log(this.sharedRound, "go fetch");
+      this.isError = false;
+
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData(SYM_STRAIGHT),
-          this.fetchData(SYM_BIAS),
+          this.fetchData(SYM_STRAIGHT, currentController.signal),
+          this.fetchData(SYM_BIAS, currentController.signal),
         ]);
+
+        // 请求响应时，如果发现请求不是最新的，丢弃数据
+        if (currentController !== this.abortController) {
+          console.log("请求已过期，丢弃数据");
+          return;
+        }
+
         this.straightData = straight || {};
         this.biasData = bias || {};
       } catch (e) {
-        if (axios.isCancel(e)) return;
+        // 被取消或不是最新请求，静默处理
+        if (e.name === "CanceledError" || this.abortController !== currentController) {
+          return;
+        }
         this.isError = true;
         this.errorMessage = e.message;
       } finally {
-        this.isLoading = false;
+        // 只有最新请求才能关闭 loading
+        if (this.abortController === currentController) {
+          this.isLoading = false;
+        }
       }
     },
-
     getUnion(hit1, hit2) {
       if (hit1 == 1 || hit2 == 1) {
         return 1;

@@ -1,17 +1,15 @@
 <template>
-  <div>
     <div>
       <RoundEdit
-        v-model="inputRound"
+        v-model="sharedRound"
         @focus="isEditing = true"
         @blur="isEditing = false"
-        @change="confirmRoundChange"
       />
 
       <div v-if="isError">
         <el-result icon="error" :subTitle="errorMessage">
           <template slot="extra">
-            <el-button @click="fetchAllData">重试</el-button>
+            <el-button @click="debounceFetchAll">重试</el-button>
           </template>
         </el-result>
       </div>
@@ -26,20 +24,19 @@
         <!-- 正常展示 -->
         <div
           v-else
-          :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }"
+          :style="{ opacity: isEditing ? 0.3 : 1 }"
           v-loading="isLoading"
         >
-          <PredictCard title="直线配对" :showRound="inputRound" :data="straightData" />
+          <PredictCard title="直线配对" :showRound="sharedRound" :data="straightData" />
           <hr />
-          <PredictCard title="斜线配对" :showRound="inputRound" :data="biasData" />
+          <PredictCard title="斜线配对" :showRound="sharedRound" :data="biasData" />
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script>
-import { mapState } from "vuex";
+import { debounce } from 'lodash'
 import { api } from "@/api";
 import axios from "axios";
 import RoundEdit from "../components/RoundEdit.vue";
@@ -54,7 +51,14 @@ export default {
     PredictCard,
   },
   computed: {
-    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
+    sharedRound: {
+      get() {
+        return this.$store.state.sharedRound;
+      },
+      set(value) {
+        this.$store.commit("SET_sharedRound", value);
+      },
+    },
     hasData() {
       return (
         Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
@@ -69,20 +73,19 @@ export default {
         if (!newVal) return;
         // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
         if (!this.isActivated) return;
-
-        this.inputRound = newVal;
-        this.fetchAllData();
+        this.debounceFetchAll();
       },
     },
   },
-
+  created() { 
+    this.debounceFetchAll = debounce(this.fetchAllData, 300)
+  },
   activated() {
     this.isActivated = true;
-    if (!!this.sharedRound) {
-      this.inputRound = this.sharedRound;
-      this.fetchAllData();
-    } else {
+    if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
+    } else {
+      this.debounceFetchAll();
     }
   },
   deactivated() {
@@ -90,7 +93,6 @@ export default {
   },
   data() {
     return {
-      inputRound: "",
       isActivated: false, // 避免冗余网络请求
 
       isEditing: false, // 控制数据部分透明度，强调输入框
@@ -103,9 +105,6 @@ export default {
     };
   },
   methods: {
-    confirmRoundChange(innerRound) {
-      this.$store.commit("SET_sharedRound", innerRound);
-    },
     goToLatest() {
       this.$store.dispatch("getLatestRound");
     },
@@ -114,7 +113,6 @@ export default {
       return res.data[0];
     },
     async fetchAllData() {
-      if (this.isLoading) return;
       this.isLoading = true;
       this.isError = false;
       try {
