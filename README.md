@@ -21,6 +21,13 @@
 
 
 ### feature
+- 切换tab时，如果先前有数据就不再多请求一次
+  - [ ] History 
+  - [ ] Pair
+  - [ ] Rept
+  - [ ] Seq
+  - [x] Sym
+  - [ ] Combine
 - [ ] sharedRound在History的特效（标记提示用户之前的位置）
 - [ ] 用flex调整滚动区域的高度
 - [ ] 滑動時 Tab 縮成窄條保留標籤文字

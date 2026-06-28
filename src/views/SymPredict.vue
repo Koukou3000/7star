@@ -58,21 +58,28 @@ export default {
       },
     },
     hasData() {
+      const straight = this.straightData;
+      const bias = this.biasData;
       return (
-        Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
+        straight && typeof straight === 'object' && Object.keys(straight).length > 0 &&
+        bias && typeof bias === 'object' && Object.keys(bias).length > 0
       );
     },
     combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
       const straight = this.straightData;
       const bias = this.biasData;
-      if (!straight || !bias) {
+      if (!straight || !bias || Object.keys(straight).length === 0 || Object.keys(bias).length === 0) {
         return {};
       }
       return fields.reduce(
         (res, field) => {
-          const straightArr = JSON.parse(straight[field]);
-          const biasArr = JSON.parse(bias[field]);
+          let straightArr = straight[field] ? JSON.parse(straight[field]) : [];
+          let biasArr = bias[field] ? JSON.parse(bias[field]) : [];
+          // 避免straightArr不是数组导致后续 null.concat() 报错
+          if (!Array.isArray(straightArr)) straightArr = [];
+          if (!Array.isArray(biasArr)) biasArr = [];
+          
           // combineData.myriabit
           res[field] = Array.from(new Set(straightArr.concat(biasArr))).sort(
             (a, b) => a - b
@@ -105,9 +112,15 @@ export default {
   },
   activated() {
     this.isActivated = true;
+    this.isError = false;
+    this.errorMessage = '';
+
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
-    } else {
+    } 
+
+    const currentRound = this.straightData?.round || this.biasData?.round;
+    if (!this.hasData || currentRound !== this.sharedRound) {
       this.debounceFetchAll();
     }
   },
@@ -160,7 +173,13 @@ export default {
         this.biasData = bias || {};
 
       } catch (e) {
-        if (axios.isCancel(e)) return;
+        if (axios.isCancel(e)) {
+          // 检查当前请求是否是最新请求，如果是最新请求却被取消了（例如切页面造成的），也必须把 loading 关掉
+          if (this.abortController === currentController) {
+            this.isLoading = false;
+          }
+          return;
+        }
         this.isError = true;
         this.errorMessage = e.message;
       } finally {
