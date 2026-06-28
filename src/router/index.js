@@ -1,6 +1,6 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
-import { cancelAllPendingRequests } from '@/api/requestManager';
+import { requestManager } from '@/api/requestManager';
 Vue.use(VueRouter);
 
 const routes = [
@@ -46,7 +46,7 @@ const router = new VueRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  cancelAllPendingRequests('切换路由') 
+  requestManager.cancelAllPendingRequests('切换路由') 
   next()
 })
 

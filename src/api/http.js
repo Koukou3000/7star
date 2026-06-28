@@ -2,73 +2,54 @@
 
 import axios from 'axios';
 import { server } from '@/config';
-import { getRequestKey, addRequestController, removeRequestController, pendingPromiseManager } from './requestManager'
+import { requestManager } from './requestManager';
 
 // 保留原生的适配器（用于真正发送请求）
-const defaultAdapter = axios.getAdapter( axios.defaults.adapter)
+const defaultAdapter = axios.getAdapter(axios.defaults.adapter)
 
 const service = axios.create({
   baseURL: server,
   timeout: 10000,
   adapter: (config) => {
-
-    const key = getRequestKey(config)
-
-    // 复用状态为pending的promise
-    if (pendingPromiseManager.has(key)) {
-      return pendingPromiseManager.get(key)
+    const key = requestManager.generateKey(config)
+    // 复用请求
+    if (requestManager.hasPending(key)) {
+      return requestManager.getPending(key);
     }
+    // 网络请求结束，清理controller & pendingPromise
+    const promise = defaultAdapter(config).finally(() => {
+      requestManager.deletePending(key);
+      requestManager.removeController(key);
+    });
 
-    const promise = defaultAdapter(config)
-    // promise.then(res => {
-    //   pendingPromiseManager.delete(key)
-    //   return res
-    // }).catch(err => {
-    //   pendingPromiseManager.delete(key) 
-    //   return Promise.reject(err)
-    // })
-    promise.finally(() => {
-      pendingPromiseManager.delete(key)
-    })
-    pendingPromiseManager.set(key, promise)
-    return promise
+    requestManager.setPending(key, promise);
+    return promise;
   }
 });
 
 
-service.interceptors.request.use(
-  config => {
-    const key = getRequestKey(config)
-    const controller = new AbortController()
-    addRequestController(key, controller)
+// 给每个请求注入 signal，并为其准备一个 abort() 用于取消请求
+service.interceptors.request.use(config => {
+  const key = requestManager.generateKey(config);
 
-    // 如果外部传了 signal，让外部 signal 的 abort 触发内部 controller 的 abort
-    if (config.signal) {
-      if (config.signal.aborted) {
-        controller.abort(config.signal.reason)
-      } else {
-        config.signal.addEventListener('abort', () => {
-          controller.abort(config.signal.reason)
-        })
-      }
+  // 1.为请求创建一个abortController用于取消请求
+  requestManager.addController(key, new AbortController())
+  const currentController = requestManager.getController(key);
+
+  // 2.将外部传入的信号，绑定到当前的controller上
+  if (config.signal) {
+    if (config.signal.aborted) {
+      currentController.abort(config.signal.reason)
+    } else {
+      config.signal.addEventListener('abort', () => {
+        currentController.abort(config.signal.reason)
+      }, { once: true })//确保该回调触发一次后自动销毁，防止长生命周期的外部信号导致内存泄漏。
     }
-    // 始终使用内部 controller 的 signal（这样全局取消和局部取消都能生效）
-    config.signal = controller.signal    
-    return config
+  }
+  config.signal = currentController.signal
+  return config
 })
-service.interceptors.response.use(
-  res => {
-    const key = getRequestKey(res.config)
-    removeRequestController(key)
-    return res
-},
-  err => {
-    if (err.config) {
-      const key = getRequestKey(err.config)
-      removeRequestController(key)
-    }
-    return Promise.reject(err)
-})
+
 
 export default service;
 

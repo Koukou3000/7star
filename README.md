@@ -1,10 +1,14 @@
 ## 功能迭代待办清单
 
 ### fix
-- 以SymPredict为例修改各个页面
-  - [ ] 抽 createLatestRequest(),删掉 AbortController
+- 留下最新的请求
+  - [ ] History 
+  - [ ] Pair
+  - [ ] Rept
+  - [ ] Seq
+  - [x] Sym
+  - [ ] Combine
 
-- [ ] 拦截 CombinePredict 的请求而非响应
 - 设计空场景 & 错误场景
   - [x] History 
   - [x] Pair

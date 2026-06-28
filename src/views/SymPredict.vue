@@ -40,6 +40,7 @@ import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
 import { TABLE_NAMES } from "@/constants";
+import axios from "axios";
 const { SYM_STRAIGHT, SYM_BIAS } = TABLE_NAMES;
 
 export default {
@@ -121,7 +122,6 @@ export default {
       isError: false,
       errorMessage: "",
 
-      abortController: null,
       straightData: {},
       biasData: {},
     };
@@ -134,34 +134,23 @@ export default {
       const res = await api.getPredict(tableName, this.sharedRound, { signal });
       return res.data[0];
     },
-      // 开始新的请求
-      //   ↓
-      // 取消旧请求
-      //         ↓
-      // 返回 signal
-      //         ↓
-      // 请求结束
-      //         ↓
-      // 判断是不是最新请求
+
     async fetchAllData() {
-      // 取消旧请求
       if (this.abortController) {
         this.abortController.abort();
       }
-
       this.abortController = new AbortController();
       const currentController = this.abortController;
 
       this.isLoading = true;
       this.isError = false;
-
       try {
         const [straight, bias] = await Promise.all([
           this.fetchData(SYM_STRAIGHT, currentController.signal),
           this.fetchData(SYM_BIAS, currentController.signal),
         ]);
 
-        // 判断是否最新请求
+        // 丢弃过期请求
         if (currentController !== this.abortController) {
           console.log("请求已过期，丢弃数据");
           return;
@@ -169,11 +158,9 @@ export default {
 
         this.straightData = straight || {};
         this.biasData = bias || {};
+
       } catch (e) {
-        // 被取消或不是最新请求，静默处理
-        if (e.name === "CanceledError" || this.abortController !== currentController) {
-          return;
-        }
+        if (axios.isCancel(e)) return;
         this.isError = true;
         this.errorMessage = e.message;
       } finally {
