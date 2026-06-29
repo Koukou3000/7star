@@ -95,7 +95,7 @@ export default {
         // const newlines = [] // 模拟获取空数据
         const newlines = resp.data || [];
         this.concatRows(newlines);
-      
+        
       } catch (e) {
         if(axios.isCancel(e)) return
         this.handleError(e);
@@ -117,12 +117,15 @@ export default {
       
     },
     concatRows(newlines) {
+      if (!newlines || newlines.length === 0) return; 
+
+      const oldLength = this.rows.length;
       const allRows = [...newlines, ...this.rows];
       const uniqueMap = new Map(allRows.map((item) => [item.round, item]));
       this.rows = [...uniqueMap.values()].sort((a, b) => a.round - b.round);
 
-      // 新数据长度和页码相同，说明还有更多数据可以获取
-      if (newlines.length === this.pageSize) {
+      // 根据去重后页面真实增加的长度来决定是否推进页码
+      if (newlines.length === this.pageSize && this.rows.length > oldLength) {
         this.page += 1;
       }
     },

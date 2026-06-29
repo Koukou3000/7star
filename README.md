@@ -1,14 +1,6 @@
 ## 功能迭代待办清单
 
 ### fix
-- 留下最新的请求
-  - [ ] History 
-  - [ ] Pair
-  - [ ] Rept
-  - [ ] Seq
-  - [x] Sym
-  - [ ] Combine
-
 - 设计空场景 & 错误场景
   - [x] History 
   - [x] Pair
@@ -17,17 +9,24 @@
   - [x] Sym
   - [ ] Combine
 
-- [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
-
-
-### feature
-- 切换tab时，如果先前有数据就不再多请求一次
-  - [ ] History 
+- 留下最新的请求
   - [ ] Pair
   - [ ] Rept
   - [ ] Seq
   - [x] Sym
   - [ ] Combine
+
+- 切换tab时，如果先前有数据就不再多请求一次
+  - [x] Pair
+  - [ ] Rept
+  - [ ] Seq
+  - [x] Sym
+  - [ ] Combine
+
+- [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
+
+
+### feature
 - [ ] sharedRound在History的特效（标记提示用户之前的位置）
 - [ ] 用flex调整滚动区域的高度
 - [ ] 滑動時 Tab 縮成窄條保留標籤文字

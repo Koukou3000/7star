@@ -60,8 +60,11 @@ export default {
       },
     },
     hasData() {
+      const straight = this.straightData;
+      const bias = this.biasData;
       return (
-        Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
+        straight && typeof straight === 'object' && Object.keys(straight).length > 0 &&
+        bias && typeof bias === 'object' && Object.keys(bias).length > 0
       );
     },
   },
@@ -84,9 +87,12 @@ export default {
     this.isActivated = true;
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
-    } else {
+    }
+    const currentRound = this.straightData?.round || this.biasData?.round;
+    if (!this.hasData || currentRound !== this.sharedRound) {
       this.debounceFetchAll();
     }
+    
   },
   deactivated() {
     this.isActivated = false;
