@@ -1,14 +1,6 @@
 ## 功能迭代待办清单
 
 ### fix
-- 设计空场景 & 错误场景
-  - [x] History 
-  - [x] Pair
-  - [x] Rept
-  - [x] Seq
-  - [x] Sym
-  - [x] Combine
-
 - 留下最新的请求
   - [x] Pair
   - [ ] Rept
