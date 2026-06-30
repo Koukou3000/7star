@@ -7,7 +7,7 @@
   - [x] Rept
   - [x] Seq
   - [x] Sym
-  - [ ] Combine
+  - [x] Combine
 
 - 留下最新的请求
   - [x] Pair
