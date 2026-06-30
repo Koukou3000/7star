@@ -1,14 +1,5 @@
 <template>
   <div>
-    <el-button
-      plain
-      round
-      :loading="isLoading"
-      @click="getMoreResult()"
-      :disabled="!hasMore"
-      >插入前 15 期
-    </el-button>
-
     <el-row>
       <el-col :span="4" class="numbers">期数</el-col>
       <el-col :span="4" align="center">万</el-col>
@@ -18,81 +9,125 @@
       <el-col :span="4" align="center">个</el-col>
     </el-row>
 
-    <div class="scroll-wrap" v-loading="isLoading">
-      <div v-for="(item, index) in results" :key="item.round" class="line-container">
-        <div :class="[zebraCSS(index)]">
-          <el-row>
-            <el-col :span="4" class="numbers">{{ item.round }}</el-col>
-            <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
-            <el-col :span="4" align="center">{{ item.thousand }}</el-col>
-            <el-col :span="4" align="center">{{ item.hundred }}</el-col>
-            <el-col :span="4" align="center">{{ item.ten }}</el-col>
-            <el-col :span="4" align="center">{{ item.one }}</el-col>
-          </el-row>
+    <!-- 
+    -错误
+    -正常 
+      -空
+      -非空 -->
+    <div v-if="isError">
+      <el-result icon="error" :subTitle="errorMessage">
+        <template slot="extra">
+          <el-button :loading="isLoading" @click="loadMore">
+            <span>重试</span>
+          </el-button>
+        </template>
+      </el-result>
+    </div>
+
+
+    <div v-else>
+      <el-button :loading="isLoading" @click="loadMore">
+        <span>插入 {{ pageSize }} 期</span>
+      </el-button>
+
+      <div v-loading="isLoading">
+        
+        <el-empty v-if="rows.length === 0"></el-empty>
+        <div v-else class="scroll-wrap">
+
+          <div v-for="(item, index) in rows" :key="item.round" class="line-container">
+            <div :class='index % 2 === 0 ? "zebra" : ""'>
+              <el-row>
+                <el-col :span="4" class="numbers">{{ item.round }}</el-col>
+                <el-col :span="4" align="center">{{ item.myriabit }}</el-col>
+                <el-col :span="4" align="center">{{ item.thousand }}</el-col>
+                <el-col :span="4" align="center">{{ item.hundred }}</el-col>
+                <el-col :span="4" align="center">{{ item.ten }}</el-col>
+                <el-col :span="4" align="center">{{ item.one }}</el-col>
+              </el-row>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script>
 import { api } from "../api";
+import axios from "axios";
 
 export default {
-  name: "RoundResult",
+  name: "History",
   data() {
     return {
       page: 0,
       pageSize: 15,
       isLoading: false,
+      isError: false,
+      errorMessage: "",
 
-      results: [],
-      hasMore: true,
+      rows: [],
     };
   },
-  computed: {
-    zebraCSS() {
-      return (index) => {
-        return index % 2 === 0 ? "zebra" : "";
-      };
-    },
-    start() {
-      return this.page * this.pageSize;
-    },
-  },
-  activated() {
-    this.getResult();
+  created() {
+    this.loadMore();
   },
   methods: {
-    async getResult() {
-      if (this.isLoading || !this.hasMore) return;
+    async loadMore() {
+      if (this.isLoading) return;
       this.isLoading = true;
+      this.isError = false;
 
       try {
-        const resp = await api.getResults(this.start, this.pageSize);
-        const newlines = resp.data;
-        const sortedLines = [...newlines].sort((a, b) => a.round - b.round);
+        const resp = await api.getResults(this.page * this.pageSize, this.pageSize);
 
-        const uniqueMap = new Map();
-        sortedLines.forEach(item => uniqueMap.set(item.round, item)); // 1. uniqueMap先塞新数据
-        this.results.forEach(item => uniqueMap.set(item.round, item)) // 2. 后塞老数据
-        this.results = [...uniqueMap.values()]
-
-        // 分页判断
-        if (newlines.length < this.pageSize) {
-          this.hasMore = false;
+        // 判断数据是否符合要求 isError
+        if (!resp || !Array.isArray(resp.data)) {
+          throw new Error("返回数据格式不正确，请重试");
         }
+        if (this.rows.length > 0  && resp.data.length === 0) {
+          this.$message.info('本次返回数据为空，请重试')
+        }
+        
+        // 符合类型要求才拼接数据
+        // const newlines = 1  // 模拟类型错误
+        // const newlines = [] // 模拟获取空数据
+        const newlines = resp.data || [];
+        this.concatRows(newlines);
+        
       } catch (e) {
-        if (e && e.message === "canceled") return; // axios.isCancel(e) 
-        console.log(e);
+        if(axios.isCancel(e)) return
+        this.handleError(e);
+
       } finally {
         this.isLoading = false;
       }
     },
-    getMoreResult() {
-      this.page += 1;
-      this.getResult();
+    handleError(e) {
+      // 如果已经渲染过数据，出现错误只弹窗提示
+      if (this.rows.length > 0) {
+        this.$message.error(e.message || "加载数据失败，请重试") 
+      }
+      else {
+        this.isError = true;
+        this.errorMessage = e.message;
+        console.error(e);
+      }
+      
+    },
+    concatRows(newlines) {
+      if (!newlines || newlines.length === 0) return; 
+
+      const oldLength = this.rows.length;
+      const allRows = [...newlines, ...this.rows];
+      const uniqueMap = new Map(allRows.map((item) => [item.round, item]));
+      this.rows = [...uniqueMap.values()].sort((a, b) => a.round - b.round);
+
+      // 根据去重后页面真实增加的长度来决定是否推进页码
+      if (newlines.length === this.pageSize && this.rows.length > oldLength) {
+        this.page += 1;
+      }
     },
   },
 };
@@ -109,9 +144,6 @@ export default {
 }
 .zebra {
   background-color: #f7f7f7;
-}
-.el-col {
-  line-height: 60px;
 }
 .numbers {
   font-size: 20px;

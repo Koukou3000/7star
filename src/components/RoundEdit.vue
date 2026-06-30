@@ -6,7 +6,7 @@
 					v-model="innerRound"
 					@focus="handleFocus"
 				 	@blur="handleBlur"
-					@change="confirm"
+					@change="handleConfirm"
 				  prefix-icon="el-icon-date"
 					class="roundNumberInput"
 				/>
@@ -38,7 +38,7 @@ export default {
 	},
 	data() {
 		return {
-			innerRound: this.value, // v-model == :value="inputRound" @input="inputRound=$event"
+			innerRound: this.value, // v-model == :value="sharedRound" @input="sharedRound=$event"
 		};
 	},
 	watch: {
@@ -49,11 +49,13 @@ export default {
 	methods: {
 		prev() {
 			this.innerRound = Number(this.innerRound) - Number(this.prevStep)
-      this.confirm()
+			this.$emit('focus')
+      this.handleConfirm()
 		},
 		next() {
 			this.innerRound = Number(this.innerRound) + Number(this.nextStep)
-      this.confirm()
+			this.$emit('focus')
+      this.handleConfirm()
 		},
 		handleFocus() {
 			this.$emit('focus')
@@ -63,18 +65,12 @@ export default {
 				this.$emit('blur')
 				return	
 			}
-			else this.confirm()
+			else this.handleConfirm()
 		},
-		confirm() {
-			this.$emit('input', this.innerRound) // v-model == :value="inputRound" @input="inputRound=$event"
-
-			clearTimeout(this.debounceTimer)
-      this.debounceTimer = setTimeout(() => {
-        const round = Number(this.innerRound)
-        this.$emit('change', round) // 通知父组件可以请求数据了
+		handleConfirm() {
+				this.$emit('input', Number(this.innerRound)) // v-model == :value="sharedRound" @input="sharedRound=$event"
         this.$emit('blur') // 通知父组件退出编辑状态
-      }, this.debounceTime)
-		}
+		},
 	}
 }
 </script>

@@ -6,7 +6,10 @@ export const api = {
   getResults: (start, end) => service.get('/api/results',{
     params: { start, end },
   }),
-  getPredict: (tableName, round) => service.get('/api/predict', {
-    params: { tableName, round },
-  })
+  getPredict: (tableName, round, options = {}) => {
+    return service.get('/api/predict', {
+      params: { tableName, round },
+      signal: options.signal
+    })
+  }
 }

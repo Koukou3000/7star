@@ -1,27 +1,42 @@
 <template>
-  <div>
     <div class="result">
       <RoundEdit
-        v-model="inputRound"
+        v-model="sharedRound"
         @focus="isEditing = true"
         @blur="isEditing = false"
-        @change="confirmRoundChange"
       />
 
-      <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-        <PredictCard title="重复" :showRound="inputRound" :data="combineData" />
-        <hr />
+      <div v-if="isError">
+        <el-result icon="error" :subTitle="errorMessage">
+          <template slot="extra">
+            <el-button @click="debounceFetchAll">重试</el-button>
+          </template>
+        </el-result>
       </div>
+
+      <div v-else v-loading="isLoading">
+        <div v-if="!hasData">
+          <el-empty description="暂无该期数的预测数据">
+            <el-button @click="goToLatest">查看最新一期</el-button>
+          </el-empty>
+        </div>
+        
+        <!-- 正常展示 -->
+        <div v-else :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
+          <PredictCard title="重复" :showRound="sharedRound" :data="combineData" />
+        </div>
+        
+      </div>
+
     </div>
-  </div>
 </template>
 
 <script>
-import { mapState } from "vuex";
 import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
-
+import axios from "axios";
+import { debounce } from 'lodash'
 import { TABLE_NAMES } from '@/constants'
 const { REPEAT_STRAIGHT, REPEAT_BIAS } = TABLE_NAMES
 
@@ -31,84 +46,33 @@ export default {
     PredictCard,
   },
   computed: {
-    ...mapState(["sharedRound"]),
-  },
-  watch: {
     sharedRound: {
-      handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
-
-        const isChange = newVal !== this.inputRound;
-        const isEmpty = !this.inputRound;
-        if (isChange || isEmpty) {
-          this.inputRound = newVal;
-        }
-        this.fetchAllData();
+      get() {
+        return this.$store.state.sharedRound;
       },
-      immediate: true,
+      set(value) {
+        this.$store.commit("SET_sharedRound", value);
+      },
     },
-  },
-  activated() {
-    this.isActivated = true;
-    if (!!this.sharedRound) {
-      this.inputRound = this.sharedRound;
-      this.fetchAllData();
-    } else {
-      this.$store.dispatch('getLatestRound')
-    }
-  },
-  deactivated() {
-    this.isActivated = false
-  },
-  data() {
-    return {
-      inputRound: "",
-      isActivated: false,
-
-      isEditing: false,
-      isLoading: false,
-      combineData: {},
-    };
-  },
-  methods: {
-    confirmRoundChange(innerRound) {
-      this.$store.commit("SET_sharedRound", innerRound);
+    hasData() {
+      return Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
     },
-
-    async fetchData(tableName) {
-      const res = await api.getPredict(tableName, this.sharedRound);
-      return res.data[0];
-    },
-    async fetchAllData() {
-      if (this.isLoading) return;
-      this.isLoading = true;
-      try {
-        const [straight, bias] = await Promise.all([
-          this.fetchData(REPEAT_STRAIGHT),
-          this.fetchData(REPEAT_BIAS),
-        ]);
-        this.generateCombineData(straight, bias);
-        this.inputRound = straight.round || bias.round;
-      } catch (e) {
-        if (e.message === "canceled")
-          return;
-        console.log(e);
-        // this.$store.dispatch('getLatestRound')
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    generateCombineData(straight, bias) {
+    combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
-      this.combineData = fields.reduce(
+      const straight = this.straightData
+      const bias = this.biasData
+      if (!straight || !bias) {
+        return {}
+      }
+      return fields.reduce(
         (res, field) => {
           const straightArr = JSON.parse(straight[field]);
           const biasArr = JSON.parse(bias[field]);
-
+          // combineData.myriabit
           res[field] = Array.from(new Set(straightArr.concat(biasArr))).sort(
             (a, b) => a - b
-          ); // combineData.myriabit
+          );
+          
           res[`${field}_hit`] = this.getUnion(
             straight[`${field}_hit`],
             bias[`${field}_hit`]
@@ -119,6 +83,72 @@ export default {
           round: straight.round || bias.round,
         }
       );
+    }
+  },
+  watch: {
+    sharedRound: {
+      handler(newVal) {
+        if (!newVal) return;
+        if (!this.isActivated) return;
+        this.debounceFetchAll();
+      },
+      immediate: true,
+    },
+  },
+  created() { 
+    this.debounceFetchAll = debounce(this.fetchAllData, 300)
+  },
+ activated() {
+    this.isActivated = true;
+    if (!this.sharedRound) {
+      this.$store.dispatch("getLatestRound");
+    } else {
+      this.debounceFetchAll();
+    }
+  },
+  deactivated() {
+    this.isActivated = false;
+  },
+  data() {
+    return {
+      isActivated: false,
+      isEditing: false,
+      isLoading: false,
+
+      isError: false,
+      errorMessage: '',
+
+      straightData: {},
+      biasData: {},
+    };
+  },
+  methods: {
+    goToLatest() {
+      this.$store.dispatch('getLatestRound')
+    },
+    async fetchData(tableName) {
+      const res = await api.getPredict(tableName, this.sharedRound);
+      return res.data[0];
+    },
+    async fetchAllData() {
+      this.isLoading = true;
+      this.isError = false
+      try {
+        const [straight, bias] = await Promise.all([
+          this.fetchData(REPEAT_STRAIGHT),
+          this.fetchData(REPEAT_BIAS),
+        ]);
+
+        this.straightData = straight || {};
+        this.biasData = bias || {};
+
+      } catch (e) {
+        if(axios.isCancel(e)) return;
+        this.isError = true
+        this.errorMessage = e.message
+      } finally {
+        this.isLoading = false;
+      }
     },
     getUnion(hit1, hit2) {
       if (hit1 == 1 || hit2 == 1) {

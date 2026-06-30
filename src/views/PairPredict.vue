@@ -1,39 +1,72 @@
 <template>
-  <div>
     <div>
       <RoundEdit
-        v-model="inputRound"
+        v-model="sharedRound"
         @focus="isEditing = true"
         @blur="isEditing = false"
-        @change="confirmRoundChange"
       />
 
-      <div :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-        <PredictCard title="直线配对" :showRound="inputRound" :data="straightData" />
-        <hr />
-        <PredictCard title="斜线配对" :showRound="inputRound" :data="biasData" />
+      <div v-if="isError">
+        <el-result icon="error" :subTitle="errorMessage">
+          <template slot="extra">
+            <el-button @click="debounceFetchAll">重试</el-button>
+          </template>
+        </el-result>
+      </div>
+
+      <div v-else v-loading="isLoading">
+        <div v-if="!hasData">
+          <el-empty description="暂无该期数的预测数据">
+            <el-button @click="goToLatest">查看最新一期</el-button>
+          </el-empty>
+        </div>
+
+        <!-- 正常展示 -->
+        <div
+          v-else
+          :style="{ opacity: isEditing ? 0.3 : 1 }"
+          v-loading="isLoading"
+        >
+          <PredictCard title="直线配对" :showRound="sharedRound" :data="straightData" />
+          <hr />
+          <PredictCard title="斜线配对" :showRound="sharedRound" :data="biasData" />
+        </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script>
-import { mapState } from "vuex";
+import { debounce } from 'lodash'
 import { api } from "@/api";
+import axios from "axios";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
 
-import { TABLE_NAMES } from '@/constants'
-const { PAIR_STRAIGHT, PAIR_BIAS } = TABLE_NAMES
+import { TABLE_NAMES } from "@/constants";
+const { PAIR_STRAIGHT, PAIR_BIAS } = TABLE_NAMES;
 
 export default {
   components: {
     RoundEdit,
     PredictCard,
-    
   },
   computed: {
-    ...mapState(["sharedRound"]), //sharedRound() {return this.$store.state.sharedRound}
+    sharedRound: {
+      get() {
+        return this.$store.state.sharedRound;
+      },
+      set(value) {
+        this.$store.commit("SET_sharedRound", value);
+      },
+    },
+    hasData() {
+      const straight = this.straightData;
+      const bias = this.biasData;
+      return (
+        straight && typeof straight === 'object' && Object.keys(straight).length > 0 &&
+        bias && typeof bias === 'object' && Object.keys(bias).length > 0
+      );
+    },
   },
   watch: {
     sharedRound: {
@@ -43,67 +76,83 @@ export default {
         if (!newVal) return;
         // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
         if (!this.isActivated) return;
-
-        const isChange = newVal !== this.inputRound;  // 只有当全局期数发生了实质性的改变（比如首次加载、或从其他页面切换回来改变了全局期数），
-        const isEmpty = !this.inputRound; // 或者是局部输入框为空时，才将全局期数同步给局部输入框。
-        if (isChange || isEmpty) {
-          this.inputRound = newVal;
-        }
-        this.fetchAllData();
+        this.debounceFetchAll();
       },
     },
   },
-
+  created() { 
+    this.debounceFetchAll = debounce(this.fetchAllData, 300)
+  },
   activated() {
     this.isActivated = true;
-    if (!!this.sharedRound) {
-      this.inputRound = this.sharedRound;
-      this.fetchAllData();
+    if (!this.sharedRound) {
+      this.$store.dispatch("getLatestRound");
     }
-    else {
-      this.$store.dispatch('getLatestRound')
+    const currentRound = this.straightData?.round || this.biasData?.round;
+    if (!this.hasData || currentRound !== this.sharedRound) {
+      this.debounceFetchAll();
     }
+    
   },
   deactivated() {
     this.isActivated = false;
   },
   data() {
     return {
-      inputRound: "",
+      isActivated: false, // 避免冗余网络请求
       isEditing: false, // 控制数据部分透明度，强调输入框
-      isLoading: true, // 控制界面转圈
+      isLoading: false, // 控制界面转圈
+      isError: false,
+      errorMessage: "", // 错误信息，非空表示有错误
 
-      // 避免冗余网络请求
-      isActivated: false,
-     
       straightData: {},
       biasData: {},
     };
   },
   methods: {
-    confirmRoundChange(innerRound) {
-      this.$store.commit("SET_sharedRound", innerRound);
+    goToLatest() {
+      this.$store.dispatch("getLatestRound");
     },
-    async fetchData(tableName) {
-      // console.log(typeof this.sharedRound) 
-      const res = await api.getPredict( tableName, this.sharedRound );
+    async fetchData(tableName, signal) {
+      const res = await api.getPredict(tableName, this.sharedRound, { signal });
       return res.data[0];
     },
     async fetchAllData() {
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+      this.abortController = new AbortController();
+      const currentController = this.abortController;
+
       this.isLoading = true;
+      this.isError = false;
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData(PAIR_STRAIGHT),
-          this.fetchData(PAIR_BIAS),
+          this.fetchData(PAIR_STRAIGHT, currentController.signal),
+          this.fetchData(PAIR_BIAS, currentController.signal),
         ]);
-        this.straightData = straight;
-        this.biasData = bias;
-      } catch (e) {
-        if (e.message === "canceled")
+
+        // 丢弃过期请求
+        if (currentController !== this.abortController) {
+          console.log("请求已过期，丢弃数据");
           return;
-        console.log(e);
+        }
+
+        this.straightData = straight || {};
+        this.biasData = bias || {};
+      } catch (e) {
+        if (axios.isCancel(e)) {
+          if (this.abortController === currentController) {
+            this.isLoading = false;
+          }
+          return;
+        }
+        this.isError = true;
+        this.errorMessage = e.message;
       } finally {
-        this.isLoading = false;
+        if (this.abortController === currentController) {
+          this.isLoading = false;
+        }
       }
     },
   },
