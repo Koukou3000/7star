@@ -10,7 +10,7 @@
   - [ ] Combine
 
 - 留下最新的请求
-  - [ ] Pair
+  - [x] Pair
   - [ ] Rept
   - [ ] Seq
   - [x] Sym

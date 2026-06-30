@@ -100,7 +100,6 @@ export default {
   data() {
     return {
       isActivated: false, // 避免冗余网络请求
-
       isEditing: false, // 控制数据部分透明度，强调输入框
       isLoading: false, // 控制界面转圈
       isError: false,
@@ -114,27 +113,46 @@ export default {
     goToLatest() {
       this.$store.dispatch("getLatestRound");
     },
-    async fetchData(tableName) {
-      const res = await api.getPredict(tableName, this.sharedRound);
+    async fetchData(tableName, signal) {
+      const res = await api.getPredict(tableName, this.sharedRound, { signal });
       return res.data[0];
     },
     async fetchAllData() {
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+      this.abortController = new AbortController();
+      const currentController = this.abortController;
+
       this.isLoading = true;
       this.isError = false;
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData(PAIR_STRAIGHT),
-          this.fetchData(PAIR_BIAS),
+          this.fetchData(PAIR_STRAIGHT, currentController.signal),
+          this.fetchData(PAIR_BIAS, currentController.signal),
         ]);
+
+        // 丢弃过期请求
+        if (currentController !== this.abortController) {
+          console.log("请求已过期，丢弃数据");
+          return;
+        }
 
         this.straightData = straight || {};
         this.biasData = bias || {};
       } catch (e) {
-        if (axios.isCancel(e)) return;
+        if (axios.isCancel(e)) {
+          if (this.abortController === currentController) {
+            this.isLoading = false;
+          }
+          return;
+        }
         this.isError = true;
         this.errorMessage = e.message;
       } finally {
-        this.isLoading = false;
+        if (this.abortController === currentController) {
+          this.isLoading = false;
+        }
       }
     },
   },
