@@ -201,14 +201,11 @@ export default {
       errorMessageBias: '',
       
       checkboxList: Object.freeze(CHECKBOX_STRAIGHT),
-      selectedList:
-        localStraight || CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value),
+      selectedList: localStraight || CHECKBOX_STRAIGHT.filter((i) => i.checked).map((i) => i.value),
       combineData: {},
 
-
       checkboxList2: Object.freeze(CHECKBOX_BIAS),
-      selectedListBias:
-        localBias || CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value),
+      selectedListBias: localBias || CHECKBOX_BIAS.filter((i) => i.checked).map((i) => i.value),
       combineDataBias: {},
     };
   },
@@ -251,11 +248,22 @@ export default {
 
   activated() {
     this.isActivated = true;
+    this.isErrorStraight = false;
+    this.isErrorBias = false;
+    this.errorMessageStraight = '';
+    this.errorMessageBias = '';
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
-    } else {
-      this.cancelAllPendingDebounce(); // 拦截请求
-      this.fetchBoth(); // 重发请求
+      return;
+    } 
+    // 没有数据/数据期数不对，重新获取
+    const roundStraight = this.combineData?.round
+    if (!this.hasDataStraight || roundStraight !== this.sharedRound) {
+      this.fetchDataStraight();
+    }
+    const roundBias = this.combineDataBias?.round
+    if (!this.hasDataBias || roundBias !== this.sharedRound) {
+      this.fetchDataBias();
     }
   },
   deactivated() {
@@ -272,44 +280,56 @@ export default {
     async fetchBoth() {
       await Promise.all([this.fetchDataStraight(), this.fetchDataBias()]);
     },
+
     // 1. 对外暴露的简洁方法
     async fetchDataStraight() {
-      this.fetchData(this.selectedList, this.sharedRound,"combineData","isLoading","isErrorStraight","errorMessageStraight");
+      this.fetchData(this.selectedList, this.sharedRound,
+        "combineData", "isLoading", "isErrorStraight", "errorMessageStraight", "abortControllerStraight");
     },
     async fetchDataBias() {
-      this.fetchData(this.selectedListBias, this.sharedRound, "combineDataBias", "isLoadingBias","isErrorBias","errorMessageBias");
+      this.fetchData(this.selectedListBias, this.sharedRound,
+        "combineDataBias", "isLoadingBias", "isErrorBias", "errorMessageBias", "abortControllerBias");
     },
 
     // 2. 统一的请求处理器（这是通用模版）
-    async fetchData(tableNameArr, currentRound, dataKey, loadingKey, errorKey, errorMessage) {
+    async fetchData(tableNameArr, currentRound, dataKey, loadingKey, errorKey, errorMessage, abortKey) {
+      if (this[abortKey]) {
+        this[abortKey].abort();
+      }
+      this[abortKey] = new AbortController();
+      const currentController = this[abortKey];
+
       this[loadingKey] = true;
       this[errorKey] = false;
       this[errorMessage] = '';
       try {
         const promises = tableNameArr.map((tableName) =>
-          api.getPredict(tableName, currentRound)
+          api.getPredict(tableName, currentRound, { signal: currentController.signal })
         );
         const predicts = await Promise.all(promises);
+        
+        // 如果这个请求已经不是当前最新的控制器了，默默丢弃，不渲染
+        if (currentController !== this[abortKey]) {
+          console.warn(`⏳ 请求已过期丢弃: 区域 ${dataKey}, 期号 ${currentRound}`);
+          return;
+        }
+
         const mergeData = this.processCombineData(predicts, currentRound);
-        if (currentRound === this.sharedRound) {
-          this[dataKey] = mergeData;
+        this[dataKey] = mergeData;
           // 模拟数据为空/出错
           // this[dataKey] = {};
           // throw Error('123123')
-        } else {
-          console.warn(
-            `⏳ 拦截到过期数据: 请求期号 ${currentRound}, 但用户已切换到 ${this.sharedRound}`
-          );
-        }
       } catch (e) {
         if (axios.isCancel(e)) return;
+
         this[errorKey] = true;
         this[errorMessage] = e.message
       } finally {
-        if (currentRound !== this.sharedRound) return;
-        this[loadingKey] = false;
+        if(currentController === this[abortKey])
+          this[loadingKey] = false;
       }
     },
+
     // 3. 公共的合并计算逻辑
     processCombineData(predicts, currentRound) {
       return predicts.reduce(

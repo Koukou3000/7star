@@ -89,6 +89,7 @@ export default {
     this.errorMessage = '';
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
+      return;
     }
     const currentRound = this.straightData?.round || this.biasData?.round;
     // 没有数据/数据期数不对，重新获取
