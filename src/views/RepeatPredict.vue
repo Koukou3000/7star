@@ -100,10 +100,15 @@ export default {
   },
  activated() {
     this.isActivated = true;
+    this.isError = false;
+    this.errorMessage = '';
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
-    } else {
-      this.debounceFetchAll();
+    }
+    const currentRound = this.straightData?.round || this.biasData?.round;
+    // 没有数据/数据期数不对，重新获取
+    if (!this.hasData || currentRound !== this.sharedRound) {
+      this.fetchAllData();
     }
   },
   deactivated() {
@@ -126,28 +131,36 @@ export default {
     goToLatest() {
       this.$store.dispatch('getLatestRound')
     },
-    async fetchData(tableName) {
-      const res = await api.getPredict(tableName, this.sharedRound);
+    async fetchData(tableName, signal) {
+      const res = await api.getPredict(tableName, this.sharedRound,{ signal });
       return res.data[0];
     },
     async fetchAllData() {
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+      this.abortController = new AbortController();
+      const currentController = this.abortController;
+
       this.isLoading = true;
       this.isError = false
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData(REPEAT_STRAIGHT),
-          this.fetchData(REPEAT_BIAS),
+          this.fetchData(REPEAT_STRAIGHT, currentController.signal),
+          this.fetchData(REPEAT_BIAS, currentController.signal),
         ]);
 
         this.straightData = straight || {};
         this.biasData = bias || {};
 
       } catch (e) {
-        if(axios.isCancel(e)) return;
-        this.isError = true
-        this.errorMessage = e.message
+        if (axios.isCancel(e)) return;
+        this.isError = true;
+        this.errorMessage = e.message;
       } finally {
-        this.isLoading = false;
+        if (this.abortController === currentController) {
+          this.isLoading = false;
+        }
       }
     },
     getUnion(hit1, hit2) {

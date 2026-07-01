@@ -3,15 +3,15 @@
 ### fix
 - 留下最新的请求
   - [x] Pair
-  - [ ] Rept
-  - [ ] Seq
+  - [x] Rept
+  - [x] Seq
   - [x] Sym
   - [ ] Combine
 
 - 切换tab时，如果先前有数据就不再多请求一次
   - [x] Pair
-  - [ ] Rept
-  - [ ] Seq
+  - [x] Rept
+  - [x] Seq
   - [x] Sym
   - [ ] Combine
 

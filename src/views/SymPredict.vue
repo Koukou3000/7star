@@ -114,14 +114,13 @@ export default {
     this.isActivated = true;
     this.isError = false;
     this.errorMessage = '';
-
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
-    } 
-
+    }
     const currentRound = this.straightData?.round || this.biasData?.round;
+    // 没有数据/数据期数不对，重新获取
     if (!this.hasData || currentRound !== this.sharedRound) {
-      this.debounceFetchAll();
+      this.fetchAllData();
     }
   },
   deactivated() {
@@ -173,13 +172,7 @@ export default {
         this.biasData = bias || {};
 
       } catch (e) {
-        if (axios.isCancel(e)) {
-          // 检查当前请求是否是最新请求，如果是最新请求却被取消了（例如切页面造成的），也必须把 loading 关掉
-          if (this.abortController === currentController) {
-            this.isLoading = false;
-          }
-          return;
-        }
+        if (axios.isCancel(e)) return;
         this.isError = true;
         this.errorMessage = e.message;
       } finally {
