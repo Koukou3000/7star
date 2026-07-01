@@ -50,6 +50,18 @@ export default {
     RoundEdit,
     PredictCard,
   },
+  data() {
+    return {
+      isActivated: false, // 避免冗余网络请求
+      isEditing: false, // 控制数据部分透明度，强调输入框
+      isLoading: true, // 控制界面转圈
+      isError: false,
+      errorMessage: "", // 错误信息，非空表示有错误
+
+      straightData: {},
+      biasData: {},
+    };
+  },
   computed: {
     sharedRound: {
       get() {
@@ -93,18 +105,7 @@ export default {
   deactivated() {
     this.isActivated = false;
   },
-  data() {
-    return {
-      isActivated: false, // 避免冗余网络请求
-      isEditing: false, // 控制数据部分透明度，强调输入框
-      isLoading: true, // 控制界面转圈
-      isError: false,
-      errorMessage: "", // 错误信息，非空表示有错误
-
-      straightData: {},
-      biasData: {},
-    };
-  },
+  
   methods: {
     goToLatest() {
       this.$store.dispatch("getLatestRound");

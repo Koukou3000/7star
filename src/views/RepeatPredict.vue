@@ -49,6 +49,19 @@ export default {
     RoundEdit,
     PredictCard,
   },
+  data() {
+    return {
+      isActivated: false,
+      isEditing: false,
+      isLoading: true,
+
+      isError: false,
+      errorMessage: '',
+
+      straightData: {},
+      biasData: {},
+    };
+  },
   computed: {
     sharedRound: {
       get() {
@@ -100,7 +113,7 @@ export default {
   created() { 
     this.debounceFetchAll = debounce(this.fetchAllData, 300)
   },
- activated() {
+  activated() {
     this.isActivated = true;
     this.isError = false;
     this.errorMessage = '';
@@ -117,19 +130,7 @@ export default {
   deactivated() {
     this.isActivated = false;
   },
-  data() {
-    return {
-      isActivated: false,
-      isEditing: false,
-      isLoading: true,
-
-      isError: false,
-      errorMessage: '',
-
-      straightData: {},
-      biasData: {},
-    };
-  },
+ 
   methods: {
     goToLatest() {
       this.$store.dispatch('getLatestRound')
