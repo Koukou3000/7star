@@ -1,28 +1,6 @@
 ## 功能迭代待办清单
 
 ### fix
-- 设计空场景 & 错误场景
-  - [x] History 
-  - [x] Pair
-  - [x] Rept
-  - [x] Seq
-  - [x] Sym
-  - [x] Combine
-
-- 留下最新的请求
-  - [x] Pair
-  - [ ] Rept
-  - [ ] Seq
-  - [x] Sym
-  - [ ] Combine
-
-- 切换tab时，如果先前有数据就不再多请求一次
-  - [x] Pair
-  - [ ] Rept
-  - [ ] Seq
-  - [x] Sym
-  - [ ] Combine
-
 - [ ] 分配各组件函数到合适的生命周期，调整各个函数的顺序
 
 

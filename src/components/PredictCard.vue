@@ -37,22 +37,22 @@
 
 <script>
 export default {
-    components: {},
-    props: {
-      title: {
-        type: String,
-        required: true,
-      },
-      data: {
-        type: Object,
-        default: () => ({})
-      },
-      showRound: [Number, String]
+  components: {},
+  props: {
+    title: {
+      type: String,
+      required: true,
     },
-    data() {
-      return {
-        
-      };
+    data: {
+      type: Object,
+      default: () => ({})
+    },
+    showRound: [Number, String]
+  },
+  data() {
+    return {
+      
+    };
   },
   methods: {
     isHit(hit){

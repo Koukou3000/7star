@@ -16,7 +16,7 @@
     </div>
 
     <div v-else v-loading="isLoading">
-      <div v-if="!hasData">
+      <div v-if="!hasData && !isLoading">
         <el-empty description="暂无该期数的预测数据">
           <el-button @click="goToLatest">查看最新一期</el-button>
         </el-empty>
@@ -51,6 +51,18 @@ export default {
     RoundEdit,
     PredictCard,
   },
+  data() {
+    return {
+      isActivated: false,
+      isEditing: false,
+			isLoading: true,
+			isError: false,
+			errorMessage: '',
+
+			straightData: {},
+			biasData: {},
+    };
+  },
   computed: {
     sharedRound: {
       get() {
@@ -60,15 +72,16 @@ export default {
         this.$store.commit("SET_sharedRound", value);
       },
     },
-		hasData() {
-			return Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
-		},
+    hasData() {
+      return this.combineData && 
+             Object.keys(this.combineData).length > 1;
+    },
 		combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
       const straight = this.straightData
       const bias = this.biasData
-      if (!straight || !bias) {
-        return {}
+      if (!straight || !bias || Object.keys(straight).length === 0 || Object.keys(bias).length === 0) {
+        return {};
       }
       return fields.reduce(
         (res, field) => {
@@ -92,13 +105,10 @@ export default {
     }
   },
   watch: {
-    sharedRound: {
-      handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
-        this.debounceFetchAll();
-      },
-      immediate: true,
+    sharedRound(newVal) {
+      if (!newVal) return;
+      if (!this.isActivated) return;
+      this.debounceFetchAll();
     },
   },
   
@@ -107,54 +117,56 @@ export default {
   },
   activated() {
     this.isActivated = true;
+    this.isError = false;
+    this.errorMessage = '';
     if (!this.sharedRound) {
-      this.$store.dispatch("getLatestRound");
-    } else {
-      this.debounceFetchAll();
+      this.$store.dispatch("getLatestRound"); 
+      return;
+    }
+    const currentRound = this.straightData?.round || this.biasData?.round;
+    // 没有数据/数据期数不对，重新获取
+    if (!this.hasData || currentRound !== this.sharedRound) {
+      this.fetchAllData();
     }
   },
   deactivated() {
     this.isActivated = false;
   },
-  data() {
-    return {
-      isActivated: false,
 
-      isEditing: false,
-			isLoading: false,
-			isError: false,
-			errorMessage: '',
-
-			straightData: {},
-			biasData: {},
-    };
-  },
   methods: {
 		goToLatest() {
       this.$store.dispatch('getLatestRound')
     },
-    async fetchData(tableName) {
-      const res = await api.getPredict(tableName, this.sharedRound);
+    async fetchData(tableName, signal) {
+      const res = await api.getPredict(tableName, this.sharedRound, { signal });
       return res.data[0];
     },
     async fetchAllData() {
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+      this.abortController = new AbortController();
+      const currentController = this.abortController;
+      
 			this.isLoading = true;
 			this.isError = false
       try {
         const [straight, bias] = await Promise.all([
-          this.fetchData(SEQ_STRAIGHT),
-          this.fetchData(SEQ_BIAS),
+          this.fetchData(SEQ_STRAIGHT, currentController.signal),
+          this.fetchData(SEQ_BIAS, currentController.signal),
 				]);
 
         this.straightData = straight || {};
         this.biasData = bias || {};
 
 			} catch (e) {
-				if (axios.isCancel(e)) return;
-				this.isError = true
-				this.errorMessage = e.message
+        if (axios.isCancel(e)) return;
+        this.isError = true;
+        this.errorMessage = e.message;
       } finally {
-        this.isLoading = false;
+        if (this.abortController === currentController) {
+          this.isLoading = false;
+        }
       }
     },
     getUnion(hit1, hit2) {

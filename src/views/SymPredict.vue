@@ -15,7 +15,7 @@
     </div>
 
     <div v-else v-loading="isLoading">
-      <div v-if="!hasData">
+      <div v-if="!hasData && !isLoading">
         <el-empty description="暂无该期数的预测数据">
           <el-button @click="goToLatest">查看最新一期</el-button>
         </el-empty>
@@ -29,24 +29,38 @@
       >
         <PredictCard title="对称" :showRound="sharedRound" :data="combineData" />
       </div>
+
     </div>
+
   </div>
 </template>
 
 <script>
-import { debounce } from "lodash";
 import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
+import axios from "axios";
+import { debounce } from "lodash";
 
 import { TABLE_NAMES } from "@/constants";
-import axios from "axios";
 const { SYM_STRAIGHT, SYM_BIAS } = TABLE_NAMES;
 
 export default {
   components: {
     RoundEdit,
     PredictCard,
+  },
+  data() {
+    return {
+      isActivated: false,
+      isEditing: false,
+      isLoading: true,
+      isError: false,
+      errorMessage: "",
+
+      straightData: {},
+      biasData: {},
+    };
   },
   computed: {
     sharedRound: {
@@ -58,12 +72,8 @@ export default {
       },
     },
     hasData() {
-      const straight = this.straightData;
-      const bias = this.biasData;
-      return (
-        straight && typeof straight === 'object' && Object.keys(straight).length > 0 &&
-        bias && typeof bias === 'object' && Object.keys(bias).length > 0
-      );
+      return this.combineData && 
+             Object.keys(this.combineData).length > 1;
     },
     combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
@@ -98,13 +108,10 @@ export default {
     },
   },
   watch: {
-    sharedRound: {
-      handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
-        this.debounceFetchAll();
-      },
-      immediate: true,
+    sharedRound(newVal) {
+      if (!newVal) return;
+      if (!this.isActivated) return;
+      this.debounceFetchAll();
     },
   },
   created() {
@@ -114,31 +121,20 @@ export default {
     this.isActivated = true;
     this.isError = false;
     this.errorMessage = '';
-
     if (!this.sharedRound) {
       this.$store.dispatch("getLatestRound");
-    } 
-
+      return;
+    }
     const currentRound = this.straightData?.round || this.biasData?.round;
+    // 没有数据/数据期数不对，重新获取
     if (!this.hasData || currentRound !== this.sharedRound) {
-      this.debounceFetchAll();
+      this.fetchAllData();
     }
   },
   deactivated() {
     this.isActivated = false;
   },
-  data() {
-    return {
-      isActivated: false,
-      isEditing: false,
-      isLoading: false,
-      isError: false,
-      errorMessage: "",
 
-      straightData: {},
-      biasData: {},
-    };
-  },
   methods: {
     goToLatest() {
       this.$store.dispatch("getLatestRound");
@@ -173,13 +169,7 @@ export default {
         this.biasData = bias || {};
 
       } catch (e) {
-        if (axios.isCancel(e)) {
-          // 检查当前请求是否是最新请求，如果是最新请求却被取消了（例如切页面造成的），也必须把 loading 关掉
-          if (this.abortController === currentController) {
-            this.isLoading = false;
-          }
-          return;
-        }
+        if (axios.isCancel(e)) return;
         this.isError = true;
         this.errorMessage = e.message;
       } finally {
