@@ -76,17 +76,6 @@ export default {
       set(value) { this.$store.commit("SET_sharedRound", value); },
     },
   },
-
-  watch: {
-    sharedRound: {
-      immediate: true,
-      handler(newVal) {
-        // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
-        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
-        if (!newVal || !this.isActivated) return;
-      },
-    },
-  },
   activated() {
     this.isActivated = true;
     if (!this.sharedRound) {
@@ -98,5 +87,4 @@ export default {
   },
 };
 </script>
-
 <style></style>

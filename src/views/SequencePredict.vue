@@ -16,7 +16,7 @@
     </div>
 
     <div v-else v-loading="isLoading">
-      <div v-if="!hasData">
+      <div v-if="!hasData && !isLoading">
         <el-empty description="暂无该期数的预测数据">
           <el-button @click="goToLatest">查看最新一期</el-button>
         </el-empty>
@@ -60,15 +60,16 @@ export default {
         this.$store.commit("SET_sharedRound", value);
       },
     },
-		hasData() {
-			return Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
-		},
+    hasData() {
+      return this.combineData && 
+             Object.keys(this.combineData).length > 1;
+    },
 		combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
       const straight = this.straightData
       const bias = this.biasData
-      if (!straight || !bias) {
-        return {}
+      if (!straight || !bias || Object.keys(straight).length === 0 || Object.keys(bias).length === 0) {
+        return {};
       }
       return fields.reduce(
         (res, field) => {
@@ -92,13 +93,10 @@ export default {
     }
   },
   watch: {
-    sharedRound: {
-      handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
-        this.debounceFetchAll();
-      },
-      immediate: true,
+    sharedRound(newVal) {
+      if (!newVal) return;
+      if (!this.isActivated) return;
+      this.debounceFetchAll();
     },
   },
   
@@ -126,7 +124,7 @@ export default {
     return {
       isActivated: false,
       isEditing: false,
-			isLoading: false,
+			isLoading: true,
 			isError: false,
 			errorMessage: '',
 

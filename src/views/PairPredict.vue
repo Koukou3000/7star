@@ -15,7 +15,7 @@
       </div>
 
       <div v-else v-loading="isLoading">
-        <div v-if="!hasData">
+        <div v-if="!hasData && !isLoading">
           <el-empty description="暂无该期数的预测数据">
             <el-button @click="goToLatest">查看最新一期</el-button>
           </el-empty>
@@ -60,24 +60,17 @@ export default {
       },
     },
     hasData() {
-      const straight = this.straightData;
-      const bias = this.biasData;
-      return (
-        straight && typeof straight === 'object' && Object.keys(straight).length > 0 &&
-        bias && typeof bias === 'object' && Object.keys(bias).length > 0
-      );
+      return  Object.keys(this.straightData || {}).length > 0 &&
+              Object.keys(this.biasData || {}).length > 0 
     },
   },
   watch: {
-    sharedRound: {
-      immediate: true,
-      handler(newVal) {
-        // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
-        if (!newVal) return;
-        // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
-        if (!this.isActivated) return;
-        this.debounceFetchAll();
-      },
+    sharedRound(newVal) {
+      // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
+      if (!newVal) return;
+      // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
+      if (!this.isActivated) return;
+      this.debounceFetchAll();
     },
   },
   created() { 
@@ -104,7 +97,7 @@ export default {
     return {
       isActivated: false, // 避免冗余网络请求
       isEditing: false, // 控制数据部分透明度，强调输入框
-      isLoading: false, // 控制界面转圈
+      isLoading: true, // 控制界面转圈
       isError: false,
       errorMessage: "", // 错误信息，非空表示有错误
 

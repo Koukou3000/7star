@@ -15,7 +15,7 @@
     </div>
 
     <div v-else v-loading="isLoading">
-      <div v-if="!hasData">
+      <div v-if="!hasData && !isLoading">
         <el-empty description="暂无该期数的预测数据">
           <el-button @click="goToLatest">查看最新一期</el-button>
         </el-empty>
@@ -29,18 +29,20 @@
       >
         <PredictCard title="对称" :showRound="sharedRound" :data="combineData" />
       </div>
+
     </div>
+
   </div>
 </template>
 
 <script>
-import { debounce } from "lodash";
 import { api } from "@/api";
 import RoundEdit from "../components/RoundEdit.vue";
 import PredictCard from "../components/PredictCard.vue";
+import axios from "axios";
+import { debounce } from "lodash";
 
 import { TABLE_NAMES } from "@/constants";
-import axios from "axios";
 const { SYM_STRAIGHT, SYM_BIAS } = TABLE_NAMES;
 
 export default {
@@ -58,12 +60,8 @@ export default {
       },
     },
     hasData() {
-      const straight = this.straightData;
-      const bias = this.biasData;
-      return (
-        straight && typeof straight === 'object' && Object.keys(straight).length > 0 &&
-        bias && typeof bias === 'object' && Object.keys(bias).length > 0
-      );
+      return this.combineData && 
+             Object.keys(this.combineData).length > 1;
     },
     combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
@@ -98,13 +96,10 @@ export default {
     },
   },
   watch: {
-    sharedRound: {
-      handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
-        this.debounceFetchAll();
-      },
-      immediate: true,
+    sharedRound(newVal) {
+      if (!newVal) return;
+      if (!this.isActivated) return;
+      this.debounceFetchAll();
     },
   },
   created() {
@@ -131,7 +126,7 @@ export default {
     return {
       isActivated: false,
       isEditing: false,
-      isLoading: false,
+      isLoading: true,
       isError: false,
       errorMessage: "",
 

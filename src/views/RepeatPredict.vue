@@ -1,34 +1,38 @@
 <template>
-    <div class="result">
-      <RoundEdit
-        v-model="sharedRound"
-        @focus="isEditing = true"
-        @blur="isEditing = false"
-      />
+  <div class="result">
+    <RoundEdit
+      v-model="sharedRound"
+      @focus="isEditing = true"
+      @blur="isEditing = false"
+    />
 
-      <div v-if="isError">
-        <el-result icon="error" :subTitle="errorMessage">
-          <template slot="extra">
-            <el-button @click="debounceFetchAll">重试</el-button>
-          </template>
-        </el-result>
-      </div>
-
-      <div v-else v-loading="isLoading">
-        <div v-if="!hasData">
-          <el-empty description="暂无该期数的预测数据">
-            <el-button @click="goToLatest">查看最新一期</el-button>
-          </el-empty>
-        </div>
-        
-        <!-- 正常展示 -->
-        <div v-else :style="{ opacity: isEditing || isLoading ? 0.3 : 1 }" v-loading="isLoading">
-          <PredictCard title="重复" :showRound="sharedRound" :data="combineData" />
-        </div>
-        
-      </div>
-
+    <div v-if="isError">
+      <el-result icon="error" :subTitle="errorMessage">
+        <template slot="extra">
+          <el-button @click="debounceFetchAll">重试</el-button>
+        </template>
+      </el-result>
     </div>
+
+    <div v-else v-loading="isLoading">
+      <div v-if="!hasData && !isLoading">
+        <el-empty description="暂无该期数的预测数据">
+          <el-button @click="goToLatest">查看最新一期</el-button>
+        </el-empty>
+      </div>
+      
+      <!-- 正常展示 -->
+      <div
+        v-else
+        :style="{ opacity: isEditing ? 0.3 : 1 }"
+        v-loading="isLoading"
+      >
+        <PredictCard title="重复" :showRound="sharedRound" :data="combineData" />
+      </div>
+      
+    </div>
+
+  </div>
 </template>
 
 <script>
@@ -55,14 +59,15 @@ export default {
       },
     },
     hasData() {
-      return Object.keys(this.straightData).length > 0 && Object.keys(this.biasData).length > 0
+      return this.combineData && 
+             Object.keys(this.combineData).length > 1;
     },
     combineData() {
       const fields = ["myriabit", "thousand", "hundred", "ten", "one"];
       const straight = this.straightData
       const bias = this.biasData
-      if (!straight || !bias) {
-        return {}
+      if (!straight || !bias || Object.keys(straight).length === 0 || Object.keys(bias).length === 0) {
+        return {};
       }
       return fields.reduce(
         (res, field) => {
@@ -86,13 +91,10 @@ export default {
     }
   },
   watch: {
-    sharedRound: {
-      handler(newVal) {
-        if (!newVal) return;
-        if (!this.isActivated) return;
-        this.debounceFetchAll();
-      },
-      immediate: true,
+    sharedRound(newVal) {
+      if (!newVal) return;
+      if (!this.isActivated) return;
+      this.debounceFetchAll();
     },
   },
   created() { 
@@ -119,7 +121,7 @@ export default {
     return {
       isActivated: false,
       isEditing: false,
-      isLoading: false,
+      isLoading: true,
 
       isError: false,
       errorMessage: '',

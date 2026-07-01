@@ -39,7 +39,7 @@ export default {
   },
   data() {
     return {
-      isLoading: false,
+      isLoading: true,
       isError: false,
       errorMessage: "",
       checkboxList: Object.freeze(this.checkboxConfig),
@@ -51,8 +51,7 @@ export default {
   computed: {
     hasData() {
       return this.combineData && 
-             Object.keys(this.combineData).length > 1 && 
-             this.combineData.round === this.sharedRound;
+             Object.keys(this.combineData).length > 1;
     },
     // isAllChecked和isIndeterminate组合了三种状态：空（FF）、满（TF）、半（FT）
     isAllChecked() {
@@ -67,11 +66,13 @@ export default {
   },
   watch: {
     sharedRound(newVal) {
+      // 若全局期数为空（如 Vuex 异步请求尚未返回），则不触发后续逻辑，防止带空参数请求接口报错
+      // 若当前组件处于 keep-alive 后台休眠状态，则直接拦截，避免无意义的后台请求
       if (!newVal || !this.isActivated) return;
       if (this.debouncedFetch) {
         this.debouncedFetch.cancel();
       }
-      this.fetchData(); // 期数改变，立刻物理截断并重发
+      this.debouncedFetch(); // 期数改变，立刻物理截断并重发
     },
     selectedbox: {
       deep: true,
@@ -88,7 +89,7 @@ export default {
     this.isError = false;
     this.errorMessage = "";
     // 核心缓存拦截：没有数据，或者期数对不上，才重新请求
-    if (!this.hasData) {
+    if (!this.hasData || this.combineData.round !== this.sharedRound) {
       this.fetchData();
     }
   },
