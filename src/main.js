@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import App from './views/Home.vue'
+import App from './views/App.vue'
 import store from './store';  // vuex
 import router from './router'
 

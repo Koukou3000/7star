@@ -10,8 +10,8 @@ const routes = [
   },
   {
     path: '/plw/history',
-    name: 'History',
-    component: () => import('@/views/History.vue') // 懒加载
+    name: 'RoundHistory',
+    component: () => import('@/views/RoundHistory.vue') // 懒加载
   },
   {
     path: '/plw/pair',
