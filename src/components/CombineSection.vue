@@ -31,11 +31,26 @@ const FIELDS = ["myriabit", "thousand", "hundred", "ten", "one"];
 export default {
   components: { PredictCard },
   props: {
-    title: { type: String, required: true }, // "直线" 或 "斜线"
-    checkboxConfig: { type: Array, required: true }, // 初始复选框配置: CHECKBOX_STRAIGHT
-    storageKey: { type: String, required: true }, // 本地缓存 Key
-    sharedRound: { type: [String, Number], required: true }, // 当前期数
-    isActivated: {type: Boolean, required: true}
+    title: {
+      type: String,
+      required: true
+    }, // "直线" 或 "斜线"
+    checkboxConfig: {
+      type: Array,
+      required: true
+    }, // 初始复选框配置: CHECKBOX_STRAIGHT
+    storageKey: {
+      type: String,
+      required: true
+    }, // 浏览器 Key，用于获取本地缓存
+    sharedRound: {
+      type: [String, Number],
+      required: true
+    }, // 当前期数
+    isActivated: {
+      type: Boolean,
+      required: true
+    }, 
   },
   data() {
     return {
